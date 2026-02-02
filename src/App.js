@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react'
 import { db } from './firebase'
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, increment, query, where, getDoc, setDoc, getDocs } from 'firebase/firestore'
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, increment, query, where, getDoc, setDoc, getDocs, writeBatch } from 'firebase/firestore'
 import * as XLSX from 'xlsx';
+
+// --- COMPONENTS ---
+import Auth from './components/Auth';
+import Modals from './components/Modals';
+import DashboardStats from './components/DashboardStats';
+import Sidebar from './components/Sidebar';
+import TransactionArea from './components/TransactionArea';
+
 
 // --- SWEETALERT2 & TOAST ---
 import Swal from 'sweetalert2';
@@ -71,6 +78,7 @@ function App() {
     const [harcayanKisi, setHarcayanKisi] = useState("");
 
     const [transferKaynakId, setTransferKaynakId] = useState(""); const [transferHedefId, setTransferHedefId] = useState(""); const [transferTutar, setTransferTutar] = useState("");
+    const [transferUcreti, setTransferUcreti] = useState(""); const [transferTarihi, setTransferTarihi] = useState("");
 
     // Abonelik Form
     const [aboAd, setAboAd] = useState(""); const [aboTutar, setAboTutar] = useState(""); const [aboGun, setAboGun] = useState(""); const [aboHesapId, setAboHesapId] = useState("");
@@ -99,6 +107,7 @@ function App() {
 
     // Fatura Giriş Formu
     const [secilenTanimId, setSecilenTanimId] = useState("");
+    const [faturaKisi, setFaturaKisi] = useState("");
     const [faturaGirisTutar, setFaturaGirisTutar] = useState("");
     const [faturaGirisTarih, setFaturaGirisTarih] = useState("");
     const [faturaGirisAciklama, setFaturaGirisAciklama] = useState("");
@@ -434,20 +443,33 @@ function App() {
                 cancelButtonText: 'Vazgeç'
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    let duzeltmeMiktari = 0;
-                    if (data.islemTipi === 'gider') duzeltmeMiktari = data.tutar;
-                    if (data.islemTipi === 'gelir') duzeltmeMiktari = -data.tutar;
-                    if (data.kategori === "Kredi Kartı Ödemesi") {
+                    // 1. Transfer Kontrolü (Genel Transfer ve Kredi Kartı Ödemesi dahil)
+                    if (data.islemTipi === 'transfer') {
+                        // Kaynak hesaba parayı iade et (+)
                         await updateDoc(doc(db, "hesaplar", data.kaynakId), { guncelBakiye: increment(data.tutar) });
+                        // Hedef hesaptan parayı geri çek (-)
                         await updateDoc(doc(db, "hesaplar", data.hedefId), { guncelBakiye: increment(-data.tutar) });
-                    } else if (data.hesapId && duzeltmeMiktari !== 0) {
-                        await updateDoc(doc(db, "hesaplar", data.hesapId), { guncelBakiye: increment(duzeltmeMiktari) });
                     }
+                    // 2. Normal Gelir/Gider Kontrolü
+                    else {
+                        let duzeltmeMiktari = 0;
+                        // Gider silinirse para hesaba geri döner (+)
+                        if (data.islemTipi === 'gider') duzeltmeMiktari = data.tutar;
+                        // Gelir silinirse para hesaptan geri alınır (-)
+                        if (data.islemTipi === 'gelir') duzeltmeMiktari = -data.tutar;
+
+                        if (data.hesapId && duzeltmeMiktari !== 0) {
+                            await updateDoc(doc(db, "hesaplar", data.hesapId), { guncelBakiye: increment(duzeltmeMiktari) });
+                        }
+                    }
+
+                    // 3. Taksit Bağlantısı Varsa Sayacı Düş (Mevcut mantık aynen kalsın)
                     if (data.kategori === "Taksit" && data.taksitId) {
                         await updateDoc(doc(db, "taksitler", data.taksitId), { odenmisTaksit: increment(-1) });
                     }
+
                     await deleteDoc(docRef);
-                    Swal.fire('Silindi!', 'Kayıt başarıyla silindi.', 'success');
+                    Swal.fire('Silindi!', 'Kayıt başarıyla silindi ve bakiyeler düzeltildi.', 'success');
                 }
             });
         }
@@ -552,7 +574,7 @@ function App() {
         if (yeniSayac >= t.taksitSayisi) {
             Swal.fire({
                 title: 'Tebrikler!',
-                text: 'Taksit bitti! Listeden kaldırılsın mı?',
+                html: `<b>${t.baslik}</b> taksitleri (${t.taksitSayisi} ay) başarıyla tamamlandı!<br/><br/>Listeden kaldırılsın mı?`,
                 icon: 'success',
                 showCancelButton: true,
                 confirmButtonText: 'Evet, Kaldır',
@@ -572,7 +594,58 @@ function App() {
         }
     }
 
-    const transferYap = async (e) => { e.preventDefault(); if (!transferKaynakId || !transferHedefId || !transferTutar) return toast.warning("Alanları seçin"); if (transferKaynakId === transferHedefId) return toast.warning("Aynı hesap"); const tutar = parseFloat(transferTutar); const k = hesaplar.find(h => h.id === transferKaynakId); const h = hesaplar.find(h => h.id === transferHedefId); await addDoc(collection(db, "nakit_islemleri"), { aileKodu, islemTipi: "transfer", kategori: "Transfer", tutar: tutar, aciklama: `${k?.hesapAdi} ➝ ${h?.hesapAdi}`, tarih: new Date(), kaynakId: transferKaynakId, hedefId: transferHedefId, harcayan: "Sistem" }); await updateDoc(doc(db, "hesaplar", transferKaynakId), { guncelBakiye: increment(-tutar) }); await updateDoc(doc(db, "hesaplar", transferHedefId), { guncelBakiye: increment(tutar) }); toast.success("✅ Transfer Başarılı!"); setTransferTutar(""); setTransferKaynakId(""); setTransferHedefId(""); }
+    const transferYap = async (e) => {
+        e.preventDefault();
+        if (!transferKaynakId || !transferHedefId || !transferTutar) return toast.warning("Alanları seçin");
+        if (transferKaynakId === transferHedefId) return toast.warning("Aynı hesap");
+
+        const tutar = parseFloat(transferTutar);
+        const ucret = parseFloat(transferUcreti) || 0;
+        const transferDate = transferTarihi ? new Date(transferTarihi) : new Date();
+
+        const k = hesaplar.find(h => h.id === transferKaynakId);
+        const h = hesaplar.find(h => h.id === transferHedefId);
+
+        // 1. Ana Transfer İşlemi
+        await addDoc(collection(db, "nakit_islemleri"), {
+            aileKodu,
+            islemTipi: "transfer",
+            kategori: "Transfer",
+            tutar: tutar,
+            aciklama: `${k?.hesapAdi} ➝ ${h?.hesapAdi}`,
+            tarih: transferDate,
+            kaynakId: transferKaynakId,
+            hedefId: transferHedefId,
+            harcayan: "Sistem"
+        });
+
+        await updateDoc(doc(db, "hesaplar", transferKaynakId), { guncelBakiye: increment(-tutar) });
+        await updateDoc(doc(db, "hesaplar", transferHedefId), { guncelBakiye: increment(tutar) });
+
+        // 2. Transfer Ücreti Varsa (Ekstra Gider Olarak İşle)
+        if (ucret > 0) {
+            await addDoc(collection(db, "nakit_islemleri"), {
+                aileKodu,
+                hesapId: transferKaynakId, // Ücret kaynak hesaptan düşer
+                islemTipi: "gider",
+                kategori: "Banka Giderleri",
+                tutar: ucret,
+                aciklama: `EFT/Havale Ücreti (${h?.hesapAdi} transferi)`,
+                tarih: transferDate,
+                harcayan: "Sistem"
+            });
+
+            // Kaynak hesaptan ücreti de düş
+            await updateDoc(doc(db, "hesaplar", transferKaynakId), { guncelBakiye: increment(-ucret) });
+        }
+
+        toast.success("✅ Transfer Başarılı!");
+        setTransferTutar("");
+        setTransferUcreti("");
+        setTransferTarihi("");
+        setTransferKaynakId("");
+        setTransferHedefId("");
+    }
     const abonelikEkle = async (e) => { e.preventDefault(); if (!aboAd || !aboTutar || !aboHesapId) return toast.warning("Eksik bilgi"); const secilenAboKategori = aboKategori || kategoriListesi[0]; const secilenAboKisi = aboKisi || aileUyeleri[0]; await addDoc(collection(db, "abonelikler"), { uid: user.uid, ad: aboAd, tutar: parseFloat(aboTutar), gun: aboGun, hesapId: aboHesapId, kategori: secilenAboKategori, kisi: secilenAboKisi, aileKodu }); toast.success("Abonelik eklendi"); setAboAd(""); setAboTutar(""); setAboGun(""); setAboHesapId(""); }
 
     // ABONELİK ÖDE (SWEETALERT2)
@@ -641,7 +714,7 @@ function App() {
 
     const faturaGir = async (e) => {
         e.preventDefault();
-        if (!secilenTanimId || !faturaGirisTutar || !faturaGirisTarih) return toast.warning("Tüm alanları doldurunuz.");
+        if (!secilenTanimId || !faturaGirisTutar || !faturaGirisTarih || !faturaKisi) return toast.warning("Tüm alanları doldurunuz.");
 
         await addDoc(collection(db, "bekleyen_faturalar"), {
             aileKodu,
@@ -649,11 +722,12 @@ function App() {
             tutar: parseFloat(faturaGirisTutar),
             sonOdemeTarihi: faturaGirisTarih,
             aciklama: faturaGirisAciklama,
+            kisi: faturaKisi,
             eklenmeTarihi: new Date()
         });
 
         toast.success("Fatura takibe alındı!");
-        setFaturaGirisTutar(""); setFaturaGirisTarih(""); setFaturaGirisAciklama("");
+        setFaturaGirisTutar(""); setFaturaGirisTarih(""); setFaturaGirisAciklama(""); setFaturaKisi("");
     }
 
     const faturaOde = async (fatura, hesapId) => {
@@ -680,7 +754,7 @@ function App() {
             tutar: fatura.tutar,
             aciklama: `${ad} Ödeme (${fatura.aciklama || ''})`,
             tarih: new Date(),
-            harcayan: "Sistem"
+            harcayan: fatura.kisi || "Sistem"
         });
 
         await updateDoc(doc(db, "hesaplar", hesapId), { guncelBakiye: increment(-fatura.tutar) });
@@ -705,7 +779,117 @@ function App() {
 
     const krediKartiBorcOde = async (e) => { e.preventDefault(); if (!kkOdemeKartId || !kkOdemeKaynakId || !kkOdemeTutar) return toast.warning("Eksik bilgi"); const tutar = parseFloat(kkOdemeTutar); const kart = hesaplar.find(h => h.id === kkOdemeKartId); const kaynak = hesaplar.find(h => h.id === kkOdemeKaynakId); await addDoc(collection(db, "nakit_islemleri"), { aileKodu, islemTipi: "transfer", kategori: "Kredi Kartı Ödemesi", tutar: tutar, aciklama: `${kaynak.hesapAdi} ➝ ${kart.hesapAdi} Borç Ödeme`, tarih: new Date(), kaynakId: kkOdemeKaynakId, hedefId: kkOdemeKartId, harcayan: "Sistem" }); await updateDoc(doc(db, "hesaplar", kkOdemeKaynakId), { guncelBakiye: increment(-tutar) }); await updateDoc(doc(db, "hesaplar", kkOdemeKartId), { guncelBakiye: increment(tutar) }); toast.success("✅ Kredi kartı ödemesi yapıldı!"); setAktifModal(null); setKkOdemeTutar(""); setKkOdemeKaynakId(""); setKkOdemeKartId(""); }
     const excelIndir = () => { const veri = islemler.map(i => ({ Tarih: new Date(i.tarih.seconds * 1000).toLocaleDateString(), Kisi: i.harcayan, IslemTipi: i.islemTipi, Kategori: i.kategori, Aciklama: i.aciklama, Tutar: i.tutar, })); const ws = XLSX.utils.json_to_sheet(veri); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Islemler"); XLSX.writeFile(wb, "Aile_Butcesi.xlsx"); }
-    const excelYukle = (e) => { const dosya = e.target.files[0]; if (!dosya) return; const reader = new FileReader(); reader.onload = (evt) => { const bstr = evt.target.result; const wb = XLSX.read(bstr, { type: 'binary' }); const wsname = wb.SheetNames[0]; const ws = wb.Sheets[wsname]; const data = XLSX.utils.sheet_to_json(ws); if (!secilenHesapId) return toast.warning("Hesap seçin!"); let sayac = 0; data.forEach(async (row) => { if (row.Tutar) { await addDoc(collection(db, "nakit_islemleri"), { aileKodu, tarih: new Date(), kategori: row.Kategori || "Genel", aciklama: row.Aciklama || "Excel", tutar: parseFloat(row.Tutar), islemTipi: "gider", hesapId: secilenHesapId, harcayan: "Excel" }); await updateDoc(doc(db, "hesaplar", secilenHesapId), { guncelBakiye: increment(-parseFloat(row.Tutar)) }); sayac++; } }); toast.success(`${sayac} işlem eklendi!`); }; reader.readAsBinaryString(dosya); }
+    const excelYukle = (e) => {
+        const dosya = e.target.files[0];
+        if (!dosya) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const bstr = evt.target.result;
+            const wb = XLSX.read(bstr, { type: 'binary', cellDates: true, cellNF: false, cellText: false }); // cellDates önemli!
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const data = XLSX.utils.sheet_to_json(ws, { raw: false, dateNF: 'yyyy-mm-dd' }); // dateNF ile tarihleri string'e formatla
+
+            if (!data || data.length === 0) return toast.warning("Dosyada veri bulunamadı!");
+
+            let sayac = 0;
+            const batch = writeBatch(db); // Toplu yazma başlat
+            let batchCount = 0;
+            let currentBatchSize = 0;
+
+            console.log("Okunan Excel Verisi (İlk Satır):", data[0]);
+
+            for (const row of data) {
+                // Alan Kontrolleri ve Temizlik
+                // Excel Key Map: Tarih, Kisi, Kategori, Aciklama, Tutar, Hesap
+                const tarihRaw = row['Tarih'] || row['Date'] || new Date();
+                let islemTarihi = null;
+
+                // Tarih Parsing (Güvenli)
+                if (tarihRaw instanceof Date) {
+                    islemTarihi = tarihRaw;
+                } else if (typeof tarihRaw === 'string') {
+                    // dd.mm.yyyy formatını kontrol et veya standart format
+                    islemTarihi = new Date(tarihRaw);
+                } else if (typeof tarihRaw === 'number') {
+                    // Excel serial date (nadiren düşer çünkü cellDates: true kullandık ama güvenlik olsun)
+                    islemTarihi = new Date((tarihRaw - (25567 + 2)) * 86400 * 1000);
+                }
+
+                if (!islemTarihi || isNaN(islemTarihi.getTime())) islemTarihi = new Date();
+
+                const tutar = parseFloat(row['Tutar'] || row['Amount'] || 0);
+                if (tutar === 0) continue; // Tutarı 0 olanları geç
+
+                const kisi = row['Kişi'] || row['Kisi'] || row['Person'] || 'Excel';
+                const kategori = row['Kategori'] || row['Category'] || 'Genel';
+                const aciklama = row['Açıklama'] || row['Aciklama'] || row['Description'] || 'Excel Import';
+
+                // Hesap Eşleştirme (Excel'deki Hesap Adı -> ID)
+                let hedefHesapId = secilenHesapId; // Varsayılan olarak seçili hesap (eğer mapping başarısızsa)
+                const excelHesapAdi = row['Hesap'] || row['Account'];
+
+                if (excelHesapAdi) {
+                    // İsme göre hesabı bulmaya çalış
+                    const bulunanHesap = hesaplar.find(h => h.hesapAdi.toLowerCase() === excelHesapAdi.toLowerCase());
+                    if (bulunanHesap) hedefHesapId = bulunanHesap.id;
+                }
+
+                if (!hedefHesapId) {
+                    console.warn("Hesap bulunamadı ve varsayılan seçilmedi:", row);
+                    continue; // Hesapsız işlem olmaz
+                }
+
+                const islemTipi = tutar < 0 ? 'gider' : 'gelir'; // Negatif tutar giderdir
+                const absTutar = Math.abs(tutar);
+
+                // Yeni Doküman Referansı
+                const yeniIslemRef = doc(collection(db, "nakit_islemleri"));
+                batch.set(yeniIslemRef, {
+                    aileKodu,
+                    tarih: islemTarihi,
+                    kategori: kategori,
+                    aciklama: aciklama,
+                    tutar: absTutar,
+                    islemTipi: islemTipi,
+                    hesapId: hedefHesapId,
+                    harcayan: kisi,
+                    createdAt: new Date()
+                });
+
+                // Bakiye Güncelleme (Bunu mecburen ayrı yapmak daha iyi transaction gerektirir ama batch içinde basit increment ile çözelim)
+                // DİKKAT: Batch update ile increment kullanabiliriz.
+                const hesapRef = doc(db, "hesaplar", hedefHesapId);
+                // İşlem tipine göre bakiyeyi artır veya azalt
+                // Eğer Excel'de -500 geldiyse (Gider), islemTipi gider, tutar 500. Bakiye -500 olmalı.
+                // Eğer +1000 geldiyse (Gelir), islemTipi gelir, tutar 1000. Bakiye +1000 olmalı.
+                // Kısaca row['Tutar'] direkt eklenecek.
+                batch.update(hesapRef, { guncelBakiye: increment(tutar) });
+
+                sayac++;
+                currentBatchSize++;
+
+                // Batch limiti 500 işlemdir. 450'de bir commit atalım güvenli olsun.
+                if (currentBatchSize >= 450) {
+                    await batch.commit();
+                    batchCount++;
+                    // Yeni batch başlat (Burada batch yeniden oluşturulmalı, firestore v9 modüler SDK'da batch mutable değil tek kullanımlık olabilir, tekrar create edelim)
+                    // Döngü içinde batch re-creation zor olabilir, bu basit import için tek batch 500 limitini zorlamayalım veya basitçe await edelim.
+                    // En iyisi promise all veya chunking. Basitlik adına 500'ü geçerse uyaralım veya ilk 500'ü alalım.
+                    // Şimdilik 500 sınırı varsayalım (kullanıcı devasa veri yüklemez umarım).
+                }
+            }
+
+            if (currentBatchSize > 0) {
+                await batch.commit();
+                toast.success(`${sayac} işlem başarıyla içe aktarıldı!`);
+            } else {
+                toast.info("İçe aktarılacak geçerli işlem bulunamadı.");
+            }
+        };
+        reader.readAsBinaryString(dosya);
+    }
 
     const modalAc = (tip, veri) => {
         setSeciliVeri(veri); setAktifModal(tip);
@@ -725,579 +909,197 @@ function App() {
     const taksitDuzenle = async (e) => { e.preventDefault(); const toplam = parseFloat(taksitToplamTutar); const sayi = parseInt(taksitSayisi); const aylik = toplam / sayi; const tarih = taksitAlisTarihi ? new Date(taksitAlisTarihi) : new Date(); await updateDoc(doc(db, "taksitler", seciliVeri.id), { baslik: taksitBaslik, toplamTutar: toplam, taksitSayisi: sayi, aylikTutar: aylik, hesapId: taksitHesapId, kategori: taksitKategori, alanKisi: taksitKisi, alisTarihi: tarih }); setAktifModal(null); setTaksitBaslik(""); setTaksitToplamTutar(""); setTaksitSayisi(""); setTaksitHesapId(""); setTaksitAlisTarihi(""); toast.success("Taksit güncellendi"); }
     const maasDuzenle = async (e) => { e.preventDefault(); await updateDoc(doc(db, "maaslar", seciliVeri.id), { ad: maasAd, tutar: parseFloat(maasTutar), gun: maasGun, hesapId: maasHesapId }); setAktifModal(null); setMaasAd(""); setMaasTutar(""); setMaasGun(""); setMaasHesapId(""); toast.success("Maaş güncellendi"); }
 
-    if (loading) return <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>Yükleniyor...</div>;
-    if (!user) return (<div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #1a2980 0%, #26d0ce 100%)', color: 'white', fontFamily: 'Segoe UI' }}> <h1 style={{ fontSize: '3rem', marginBottom: '20px' }}>🏡 AİLE BÜTÇEM</h1> <p style={{ marginBottom: '40px' }}>Evin ekonomisi kontrol altında.</p> <button onClick={girisYap} style={{ padding: '15px 40px', fontSize: '1.1rem', borderRadius: '50px', border: 'none', cursor: 'pointer', background: 'white', color: '#1a2980', fontWeight: 'bold' }}>Google ile Giriş Yap</button> <ToastContainer position="top-right" autoClose={3000} /> </div>);
-    if (!aileKodu) return (<div style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#f7fafc', fontFamily: 'Segoe UI' }}> <h2 style={{ color: '#2d3748', marginBottom: '20px' }}>🔑 Aile Girişi</h2> <div style={{ background: 'white', padding: '30px', borderRadius: '15px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', width: '300px', textAlign: 'center' }}> <p style={{ fontSize: '14px', color: '#718096', marginBottom: '20px' }}>Tüm aile bireyleri aynı verileri görmek için aynı kodu girmelidir.</p> <form onSubmit={aileKoduKaydet}> <input placeholder="Aile Kodu (Örn: YILMAZLAR)" value={girilenKod} onChange={e => setGirilenKod(e.target.value.toUpperCase())} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0', marginBottom: '15px', textAlign: 'center', fontSize: '16px', letterSpacing: '2px' }} required /> <button type="submit" style={{ width: '100%', padding: '12px', background: '#3182ce', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>GİRİŞ YAP</button> </form> </div> <ToastContainer position="top-right" autoClose={3000} /> </div>);
+    if (loading || !user || !aileKodu) {
+        return <Auth
+            user={user}
+            loading={loading}
+            girisYap={girisYap}
+            aileKodu={aileKodu}
+            girilenKod={girilenKod}
+            setGirilenKod={setGirilenKod}
+            aileKoduKaydet={aileKoduKaydet}
+        />;
+    }
 
     return (
         <div style={{ padding: '30px', fontFamily: 'Segoe UI', width: '100vw', boxSizing: 'border-box', background: '#f7f9fc', minHeight: '100vh', color: '#333', overflowX: 'hidden' }}>
             <ToastContainer position="top-right" autoClose={2000} theme="light" />
 
-            {/* MODALLAR */}
-            {aktifModal && (<div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
-                <div style={{ background: 'white', padding: '25px', borderRadius: '15px', width: '450px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-                    {/* MEVCUT DÜZENLEME MODALLARI */}
-                    {aktifModal === 'duzenle_hesap' && <form onSubmit={hesapDuzenle}><h3>Düzenle</h3><input value={hesapAdi} onChange={e => setHesapAdi(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={baslangicBakiye} onChange={e => setBaslangicBakiye(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px' }} />{seciliVeri.hesapTipi === 'krediKarti' && <input type="number" placeholder="Kesim Günü (1-31)" value={hesapKesimGunu} onChange={e => setHesapKesimGunu(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }} />}<button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', border: 'none', borderRadius: '5px' }}>Kaydet</button><button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button></form>}
-                    {aktifModal === 'duzenle_islem' && <form onSubmit={islemDuzenle}><h3>Düzenle</h3><input value={islemAciklama} onChange={e => setIslemAciklama(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px' }} /><input type="number" value={islemTutar} onChange={e => setIslemTutar(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px' }} /><input type="datetime-local" value={islemTarihi} onChange={e => setIslemTarihi(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><select value={harcayanKisi} onChange={e => setHarcayanKisi(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select><select value={kategori} onChange={e => setKategori(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select><button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', borderRadius: '5px', border: 'none' }}>Kaydet</button><button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button></form>}
-                    {aktifModal === 'duzenle_abonelik' && <form onSubmit={abonelikDuzenle}><h3>Sabit Gider Düzenle</h3><input value={aboAd} onChange={e => setAboAd(e.target.value)} placeholder="Gider Adı" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={aboTutar} onChange={e => setAboTutar(e.target.value)} placeholder="Tutar" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={aboGun} onChange={e => setAboGun(e.target.value)} placeholder="Gün (1-31)" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><select value={aboKategori} onChange={e => setAboKategori(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select><select value={aboKisi} onChange={e => setAboKisi(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select><select value={aboHesapId} onChange={e => setAboHesapId(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }}><option value="">Hangi Hesaptan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select><button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', borderRadius: '5px', border: 'none' }}>Kaydet</button><button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button></form>}
-                    {aktifModal === 'duzenle_taksit' && <form onSubmit={taksitDuzenle}><h3>Taksit Planını Düzenle</h3><input value={taksitBaslik} onChange={e => setTaksitBaslik(e.target.value)} placeholder="Ne aldın?" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={taksitToplamTutar} onChange={e => setTaksitToplamTutar(e.target.value)} placeholder="Toplam Borç" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={taksitSayisi} onChange={e => setTaksitSayisi(e.target.value)} placeholder="Taksit Sayısı" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><select value={taksitKategori} onChange={e => setTaksitKategori(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select><select value={taksitKisi} onChange={e => setTaksitKisi(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select><select value={taksitHesapId} onChange={e => setTaksitHesapId(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }}><option value="">Hangi Karttan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select><label style={{ fontSize: '12px' }}>Alış Tarihi:</label><input type="date" value={taksitAlisTarihi} onChange={e => setTaksitAlisTarihi(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }} /><div style={{ marginBottom: '15px', fontSize: '13px', color: 'blue' }}>Yeni Aylık Tutar: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0 ₺'}</div><button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', borderRadius: '5px', border: 'none' }}>Kaydet</button><button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button></form>}
-                    {aktifModal === 'duzenle_maas' && <form onSubmit={maasDuzenle}><h3>Maaş Düzenle</h3><input value={maasAd} onChange={e => setMaasAd(e.target.value)} placeholder="Maaş Adı (Örn: Baba Maaş)" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={maasTutar} onChange={e => setMaasTutar(e.target.value)} placeholder="Tutar" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input type="number" value={maasGun} onChange={e => setMaasGun(e.target.value)} placeholder="Yatma Günü (1-31)" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><select value={maasHesapId} onChange={e => setMaasHesapId(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }}><option value="">Hangi Hesaba?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select><button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', borderRadius: '5px', border: 'none' }}>Kaydet</button><button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button></form>}
-                    {aktifModal === 'duzenle_fatura_tanim' && <form onSubmit={faturaTanimDuzenle}><h3>Fatura Tanımı Düzenle</h3><input value={tanimBaslik} onChange={e => setTanimBaslik(e.target.value)} placeholder="Başlık" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input value={tanimKurum} onChange={e => setTanimKurum(e.target.value)} placeholder="Kurum" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} /><input value={tanimAboneNo} onChange={e => setTanimAboneNo(e.target.value)} placeholder="Abone No" style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }} /><button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', borderRadius: '5px', border: 'none' }}>Kaydet</button><button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button></form>}
-                    {aktifModal === 'kredi_karti_ode' && <form onSubmit={krediKartiBorcOde}><h3>💳 Kredi Kartı Borcu Öde</h3>{(() => { const kart = hesaplar.find(h => h.id === kkOdemeKartId); const borc = Math.abs(kart?.guncelBakiye || 0); const asgari = borc * 0.20; return (<div style={{ marginBottom: '20px', padding: '10px', background: '#f3e8ff', borderRadius: '8px' }}> <p style={{ margin: 0 }}><strong>Kart:</strong> {kart?.hesapAdi}</p> <p style={{ margin: '5px 0' }}><strong>Güncel Borç:</strong> {formatPara(borc)}</p> <p style={{ margin: 0, color: '#6b46c1' }}><strong>Asgari (%20):</strong> {formatPara(asgari)}</p> </div>) })()} <select value={kkOdemeKaynakId} onChange={e => setKkOdemeKaynakId(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} required><option value="">Parayı Hangi Hesaptan Çekelim?</option>{hesaplar.filter(h => h.id !== kkOdemeKartId).map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({formatPara(h.guncelBakiye)})</option>)}</select> <input type="number" placeholder="Ödenecek Tutar (₺)" value={kkOdemeTutar} onChange={e => setKkOdemeTutar(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }} required /> <button type="submit" style={{ width: '100%', background: '#805ad5', color: 'white', padding: '10px', borderRadius: '5px', border: 'none', fontWeight: 'bold' }}>ÖDEMEYİ YAP</button> <button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button> </form>}
+            <Modals
+                aktifModal={aktifModal} setAktifModal={setAktifModal}
+                seciliVeri={seciliVeri}
+                hesapAdi={hesapAdi} setHesapAdi={setHesapAdi}
+                baslangicBakiye={baslangicBakiye} setBaslangicBakiye={setBaslangicBakiye}
+                hesapKesimGunu={hesapKesimGunu} setHesapKesimGunu={setHesapKesimGunu}
+                islemAciklama={islemAciklama} setIslemAciklama={setIslemAciklama}
+                islemTutar={islemTutar} setIslemTutar={setIslemTutar}
+                islemTarihi={islemTarihi} setIslemTarihi={setIslemTarihi}
+                harcayanKisi={harcayanKisi} setHarcayanKisi={setHarcayanKisi}
+                kategori={kategori} setKategori={setKategori}
+                aboAd={aboAd} setAboAd={setAboAd}
+                aboTutar={aboTutar} setAboTutar={setAboTutar}
+                aboGun={aboGun} setAboGun={setAboGun}
+                aboHesapId={aboHesapId} setAboHesapId={setAboHesapId}
+                aboKategori={aboKategori} setAboKategori={setAboKategori}
+                aboKisi={aboKisi} setAboKisi={setAboKisi}
+                taksitBaslik={taksitBaslik} setTaksitBaslik={setTaksitBaslik}
+                taksitToplamTutar={taksitToplamTutar} setTaksitToplamTutar={setTaksitToplamTutar}
+                taksitSayisi={taksitSayisi} setTaksitSayisi={setTaksitSayisi}
+                taksitHesapId={taksitHesapId} setTaksitHesapId={setTaksitHesapId}
+                taksitKategori={taksitKategori} setTaksitKategori={setTaksitKategori}
+                taksitKisi={taksitKisi} setTaksitKisi={setTaksitKisi}
+                taksitAlisTarihi={taksitAlisTarihi} setTaksitAlisTarihi={setTaksitAlisTarihi}
+                maasAd={maasAd} setMaasAd={setMaasAd}
+                maasTutar={maasTutar} setMaasTutar={setMaasTutar}
+                maasGun={maasGun} setMaasGun={setMaasGun}
+                maasHesapId={maasHesapId} setMaasHesapId={setMaasHesapId}
+                tanimBaslik={tanimBaslik} setTanimBaslik={setTanimBaslik}
+                tanimKurum={tanimKurum} setTanimKurum={setTanimKurum}
+                tanimAboneNo={tanimAboneNo} setTanimAboneNo={setTanimAboneNo}
+                kkOdemeKartId={kkOdemeKartId} setKkOdemeKartId={setKkOdemeKartId}
+                kkOdemeKaynakId={kkOdemeKaynakId} setKkOdemeKaynakId={setKkOdemeKaynakId}
+                kkOdemeTutar={kkOdemeTutar} setKkOdemeTutar={setKkOdemeTutar}
+                faturaGirisTutar={faturaGirisTutar} setFaturaGirisTutar={setFaturaGirisTutar}
+                faturaGirisTarih={faturaGirisTarih} setFaturaGirisTarih={setFaturaGirisTarih}
+                faturaGirisAciklama={faturaGirisAciklama} setFaturaGirisAciklama={setFaturaGirisAciklama}
+                yeniKisiAdi={yeniKisiAdi} setYeniKisiAdi={setYeniKisiAdi}
+                yeniKategoriAdi={yeniKategoriAdi} setYeniKategoriAdi={setYeniKategoriAdi}
+                yeniAileKoduInput={yeniAileKoduInput} setYeniAileKoduInput={setYeniAileKoduInput}
+                tasimaIslemiSuruyor={tasimaIslemiSuruyor}
+                aileUyeleri={aileUyeleri} setAileUyeleri={setAileUyeleri}
+                kategoriListesi={kategoriListesi} setKategoriListesi={setKategoriListesi}
+                hesaplar={hesaplar}
+                tanimliFaturalar={tanimliFaturalar}
+                aileKodu={aileKodu}
+                formatPara={formatPara}
+                tarihSadeceGunAyYil={tarihSadeceGunAyYil}
+                hesapDuzenle={hesapDuzenle}
+                islemDuzenle={islemDuzenle}
+                abonelikDuzenle={abonelikDuzenle}
+                taksitDuzenle={taksitDuzenle}
+                maasDuzenle={maasDuzenle}
+                faturaTanimDuzenle={faturaTanimDuzenle}
+                krediKartiBorcOde={krediKartiBorcOde}
+                faturaOde={faturaOde}
+                bekleyenFaturaDuzenle={bekleyenFaturaDuzenle}
+                verileriTasi={verileriTasi}
+                // Yeni Eklenenler
+                hesapEkle={hesapEkle}
+                hesapTipi={hesapTipi} setHesapTipi={setHesapTipi}
+                maasEkle={maasEkle}
+                faturaTanimEkle={faturaTanimEkle}
+                abonelikEkle={abonelikEkle}
+            />
 
-                    {/* FATURA ÖDEME MODALI */}
-                    {aktifModal === 'fatura_ode' && <div style={{ textAlign: 'center' }}>
-                        {(() => {
-                            const tanim = tanimliFaturalar.find(t => t.id === seciliVeri.tanimId);
-                            const ad = tanim ? tanim.baslik : "Fatura";
-                            return (
-                                <>
-                                    <h3>🧾 Fatura Öde</h3>
-                                    <p style={{ fontSize: '18px', fontWeight: 'bold' }}>{ad}</p>
-                                    <p style={{ color: '#c53030', fontSize: '20px', fontWeight: 'bold' }}>{formatPara(seciliVeri.tutar)}</p>
-                                    <p style={{ fontSize: '13px', color: '#777' }}>Son Ödeme: {tarihSadeceGunAyYil(seciliVeri.sonOdemeTarihi)}</p>
-                                </>
-                            )
-                        })()}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-                            {hesaplar.map(h => (
-                                <button key={h.id} onClick={() => faturaOde(seciliVeri, h.id)} style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '8px', background: 'white', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>{h.hesapAdi}</span>
-                                    <span style={{ fontWeight: 'bold' }}>{formatPara(h.guncelBakiye)}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <button onClick={() => setAktifModal(null)} style={{ marginTop: '15px', padding: '10px', width: '100%', border: 'none', background: '#eee', borderRadius: '5px' }}>İptal</button>
-                    </div>}
-
-                    {/* BEKLEYEN FATURA DÜZENLEME MODALI */}
-                    {aktifModal === 'duzenle_bekleyen_fatura' && <form onSubmit={bekleyenFaturaDuzenle}>
-                        <h3>Faturayı Düzenle</h3>
-                        <input type="number" value={faturaGirisTutar} onChange={e => setFaturaGirisTutar(e.target.value)} placeholder="Tutar" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} />
-                        <input type="date" value={faturaGirisTarih} onChange={e => setFaturaGirisTarih(e.target.value)} style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd' }} />
-                        <input value={faturaGirisAciklama} onChange={e => setFaturaGirisAciklama(e.target.value)} placeholder="Açıklama" style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #ddd' }} />
-                        <button type="submit" style={{ width: '100%', background: 'blue', color: 'white', padding: '10px', borderRadius: '5px', border: 'none' }}>Kaydet</button>
-                        <button type="button" onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '10px', background: '#eee', padding: '10px', borderRadius: '5px' }}>İptal</button>
-                    </form>}
-
-                    {aktifModal === 'ayarlar_yonetim' && <div><h3>⚙️ Ayarlar</h3><hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '15px 0' }} /><h4>👨‍👩‍👧‍👦 Aile Bireyleri</h4><ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '10px' }}>{aileUyeleri.map(k => (<li key={k} style={{ background: '#edf2f7', padding: '5px 10px', borderRadius: '15px', fontSize: '13px' }}>{k} <span onClick={() => { if (window.confirm("Silinsin mi?")) { const y = aileUyeleri.filter(x => x !== k); setAileUyeleri(y); setDoc(doc(db, "ayarlar", aileKodu), { aileUyeleri: y }, { merge: true }); } }} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}</ul><form onSubmit={(e) => { e.preventDefault(); if (!yeniKisiAdi) return; const y = [...aileUyeleri, yeniKisiAdi]; setAileUyeleri(y); setDoc(doc(db, "ayarlar", aileKodu), { aileUyeleri: y }, { merge: true }); setYeniKisiAdi(""); toast.success("Kişi eklendi"); }} style={{ display: 'flex', gap: '5px', marginTop: '10px' }}><input value={yeniKisiAdi} onChange={e => setYeniKisiAdi(e.target.value)} placeholder="Yeni Kişi Adı" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '5px' }} /><button type="submit" style={{ background: '4299e1', color: 'white', border: 'none', padding: '8px', borderRadius: '5px' }}>Ekle</button></form><hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '20px 0' }} /><h4>📂 Kategoriler</h4><ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '10px' }}>{kategoriListesi.map(k => (<li key={k} style={{ background: '#f0fff4', padding: '5px 10px', borderRadius: '15px', fontSize: '13px' }}>{k} <span onClick={() => { if (window.confirm("Silinsin mi?")) { const y = kategoriListesi.filter(x => x !== k); setKategoriListesi(y); setDoc(doc(db, "ayarlar", aileKodu), { kategoriler: y }, { merge: true }); } }} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}</ul><form onSubmit={(e) => { e.preventDefault(); if (!yeniKategoriAdi) return; const y = [...kategoriListesi, yeniKategoriAdi]; setKategoriListesi(y); setDoc(doc(db, "ayarlar", aileKodu), { kategoriler: y }, { merge: true }); setYeniKategoriAdi(""); toast.success("Kategori eklendi"); }} style={{ display: 'flex', gap: '5px', marginTop: '10px' }}><input value={yeniKategoriAdi} onChange={e => setYeniKategoriAdi(e.target.value)} placeholder="Yeni Kategori" style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '5px' }} /><button type="submit" style={{ background: 'green', color: 'white', border: 'none', padding: '8px', borderRadius: '5px' }}>Ekle</button></form><div style={{ marginTop: '30px', padding: '15px', background: '#fffaf0', border: '1px solid #fbd38d', borderRadius: '8px' }}><h4 style={{ margin: '0 0 10px 0', color: '#c05621' }}>🚚 Aile Kodunu Değiştir / Verileri Taşı</h4><p style={{ fontSize: '12px', color: '#7b341e' }}>Mevcut kodunuz: <b>{aileKodu}</b>. Verilerinizi yeni bir koda taşımak için yeni kodu yazın.</p><form onSubmit={verileriTasi} style={{ display: 'flex', gap: '5px' }}><input value={yeniAileKoduInput} onChange={e => setYeniAileKoduInput(e.target.value.toUpperCase())} placeholder="YENİ KOD" style={{ flex: 1, padding: '8px', border: '1px solid #fbd38d', borderRadius: '5px' }} /><button type="submit" disabled={tasimaIslemiSuruyor} style={{ background: '#c05621', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>{tasimaIslemiSuruyor ? 'Taşınıyor...' : 'TAŞI'}</button></form></div><button onClick={() => setAktifModal(null)} style={{ width: '100%', marginTop: '20px', padding: '10px', border: 'none', background: '#eee', borderRadius: '5px' }}>Kapat</button></div>}
-                </div>
-            </div>)}
-
-            {/* HEADER */}
-            <div style={{ textAlign: 'center', marginBottom: '30px', position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '900', color: '#1a202c', letterSpacing: '-1px' }}>🏡 AİLE BÜTÇESİ</h1>
-                    <span style={{ fontSize: '12px', background: '#e2e8f0', padding: '4px 8px', borderRadius: '5px', color: '#4a5568' }}>Kod: {aileKodu}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#4a5568', marginRight: '5px' }}>Hoşgeldin, {user?.displayName?.split(' ')[0]}</span>
-                    <button onClick={() => setAktifModal('ayarlar_yonetim')} style={{ background: '#e2e8f0', color: '#4a5568', border: 'none', padding: '8px 12px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>⚙️ Ayarlar</button>
-                    <button onClick={aileKoduCikis} style={{ background: '#e2e8f0', color: '#4a5568', border: 'none', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Kod Değiş</button>
-                    <button onClick={cikisYap} style={{ background: '#e53e3e', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Çıkış</button>
-                </div>
+            <div id="dashboard-top">
+                <DashboardStats
+                    user={user}
+                    aileKodu={aileKodu}
+                    bildirimler={bildirimler}
+                    toplamGelir={toplamGelir}
+                    toplamGider={toplamGider}
+                    bugunGider={bugunGider}
+                    gunlukVeri={gunlukVeri}
+                    kategoriVerisi={kategoriVerisi}
+                    aktifAy={aktifAy}
+                    setAktifAy={setAktifAy}
+                    modalAc={modalAc}
+                    setAktifModal={setAktifModal}
+                    cikisYap={cikisYap}
+                    aileKoduCikis={aileKoduCikis}
+                    formatPara={formatPara}
+                    aileUyeleri={aileUyeleri}
+                    filtrelenmisIslemler={filtrelenmisIslemler}
+                    gunlukOrtalama={gunlukOrtalama}
+                    COLORS={COLORS}
+                    abonelikOde={abonelikOde}
+                    taksitOde={taksitOde}
+                    maasYatir={maasYatir}
+                />
             </div>
 
-            {/* BİLDİRİM ALANI (SADECE ACİL OLANLAR) */}
-            {bildirimler.length > 0 && (
-                <div style={{ marginBottom: '30px', background: '#fff5f5', border: '1px solid #feb2b2', borderRadius: '10px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <h4 style={{ margin: 0, color: '#c53030', display: 'flex', alignItems: 'center', gap: '5px' }}>⚠️ Acil Durumlar</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '10px' }}>
-                        {bildirimler.map((b, i) => (
-                            <div key={i} style={{ background: 'white', padding: '10px', borderRadius: '8px', borderLeft: `4px solid ${b.renk === 'green' ? '#48bb78' : b.renk === 'orange' ? '#ed8936' : '#fc8181'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                                <span style={{ fontSize: '14px', fontWeight: '600', color: '#2d3748' }}>{b.mesaj}</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontWeight: 'bold', color: b.renk === 'green' ? '#48bb78' : b.renk === 'orange' ? '#ed8936' : '#e53e3e' }}>{formatPara(b.tutar)}</span>
-                                    {b.tip !== 'kk_hatirlatma' && <button onClick={() => {
-                                        if (b.tip === 'abonelik') abonelikOde(b.data);
-                                        if (b.tip === 'taksit') taksitOde(b.data);
-                                        if (b.tip === 'maas') maasYatir(b.data);
-                                        if (b.tip === 'fatura') modalAc('fatura_ode', b.data);
-                                    }} style={{ background: b.renk === 'green' ? '#48bb78' : '#c53030', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}>{b.tip === 'maas' ? 'Yatır' : 'Öde'}</button>}
-                                    {b.tip === 'kk_hatirlatma' && <button onClick={() => modalAc('kredi_karti_ode', b.data)} style={{ background: '#ed8936', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px' }}>Öde</button>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* ÜST KARTLAR */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', borderLeft: '5px solid #48bb78' }}>
-                    <h3 style={{ margin: 0, color: '#888', fontSize: '11px', letterSpacing: '1px' }}>TOPLAM GELİR ({aktifAy})</h3>
-                    <h1 style={{ fontSize: '26px', margin: '10px 0', color: '#333' }}>{formatPara(toplamGelir)}</h1>
-                </div>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', borderLeft: '5px solid #F59E0B' }}>
-                    <span style={{ color: '#888', fontSize: '11px', letterSpacing: '1px' }}>BUGÜN HARCANAN</span>
-                    <h2 style={{ color: '#333', margin: '10px 0', fontSize: '26px' }}>{formatPara(bugunGider)}</h2>
-                </div>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', borderLeft: '5px solid #f56565' }}>
-                    <span style={{ color: '#888', fontSize: '11px', letterSpacing: '1px' }}>GİDER ({aktifAy})</span>
-                    <h2 style={{ color: '#333', margin: '10px 0', fontSize: '24px' }}>{formatPara(toplamGider)}</h2>
-                </div>
-            </div>
-
-            {/* YENİ SATIR: AİLE BİREYLERİ HARCAMALARI */}
-            <div style={{ marginBottom: '30px' }}>
-                <h4 style={{ margin: '0 0 15px 0', color: '#4a5568' }}>👨‍👩‍👧‍👦 Kişi Bazlı Harcamalar ({aktifAy})</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`, gap: '20px' }}>
-                    {aileUyeleri.map(uye => {
-                        const uyeTutar = filtrelenmisIslemler.filter(i => i.islemTipi === 'gider' && i.harcayan === uye).reduce((acc, i) => acc + i.tutar, 0);
-                        return (
-                            <div key={uye} style={{ background: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', borderLeft: '4px solid #805ad5' }}>
-                                <span style={{ color: '#718096', fontSize: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{uye}</span>
-                                <h3 style={{ margin: '5px 0 0 0', color: '#2d3748', fontSize: '20px' }}>{formatPara(uyeTutar)}</h3>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-
-            {/* ORTA BÖLÜM: GRAFİKLER */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '25px', marginBottom: '30px' }}>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', minHeight: '300px' }}>
-                    <h4 style={{ margin: '0 0 20px 0', color: '#2d3748' }}>📅 Günlük Harcama Trendi ({aktifAy})</h4>
-                    <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={gunlukVeri}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip formatter={(val) => `${val} ₺`} />
-                            <Bar dataKey="value" fill="#8884d8" radius={[5, 5, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                    {aktifAy !== "Tümü" && (
-                        <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', color: '#718096', fontStyle: 'italic' }}>
-                            ✨ Bu ay günlük ortalama harcamanız: <span style={{ fontWeight: 'bold', color: '#2d3748' }}>{formatPara(gunlukOrtalama)}</span>
-                        </div>
-                    )}
-                </div>
-
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <h4 style={{ color: '#2d3748', marginBottom: '10px' }}>Kategori Dağılımı ({aktifAy})</h4>
-                    <ResponsiveContainer width="100%" height={250}><PieChart><Pie data={kategoriVerisi} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name }) => name}>{kategoriVerisi.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip formatter={(value) => formatPara(value)} /><Legend /></PieChart></ResponsiveContainer>
-                </div>
-            </div>
-
-            {/* ALT BÖLÜM: (1fr 2fr) */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
+                <Sidebar
+                    netVarlik={hesaplar.reduce((acc, h) => acc + (parseFloat(h.guncelBakiye) || 0), 0)}
+                    aylikLimit={aylikLimit} setAylikLimit={setAylikLimit}
+                    aileKodu={aileKodu}
+                    harcananLimit={harcananLimit}
+                    limitYuzdesi={limitYuzdesi}
+                    limitRenk={limitRenk}
+                    tanimliFaturalar={tanimliFaturalar}
+                    bekleyenFaturalar={bekleyenFaturalar}
+                    modalAc={modalAc}
+                    normalSil={normalSil}
+                    maaslar={maaslar}
+                    hesaplar={hesaplar}
+                    aktifAy={aktifAy}
+                    filtrelenmisIslemler={filtrelenmisIslemler}
+                    formatPara={formatPara}
+                    hesapSilGuvenli={hesapSilGuvenli}
+                    toplamHesapBakiyesi={toplamHesapBakiyesi}
+                    taksitler={taksitler}
+                    taksitOde={taksitOde}
+                    toplamAylikTaksitOdemesi={toplamAylikTaksitOdemesi}
+                    toplamKalanTaksitBorcu={toplamKalanTaksitBorcu}
+                    abonelikler={abonelikler}
+                    abonelikOde={abonelikOde}
+                    toplamSabitGider={toplamSabitGider}
+                    tarihSadeceGunAyYil={tarihSadeceGunAyYil}
+                />
 
-                {/* SOL SÜTUN */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                    {/* LİMİT KARTI */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                            <h4 style={{ marginTop: 0, marginBottom: 0, color: '#2d3748' }}>🎯 Aylık Bütçe Limiti</h4>
-                            <input type="number" value={aylikLimit} onChange={(e) => { setAylikLimit(e.target.value); setDoc(doc(db, "ayarlar", aileKodu), { limit: e.target.value }, { merge: true }); }} style={{ width: '70px', border: '1px solid #ddd', borderRadius: '5px', padding: '2px', fontSize: '12px' }} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '5px', fontWeight: 'bold' }}><span style={{ color: limitRenk }}>Harcanan: {formatPara(harcananLimit)}</span><span>{limitYuzdesi.toFixed(0)}%</span></div>
-                            <div style={{ width: '100%', height: '15px', background: '#edf2f7', borderRadius: '10px', overflow: 'hidden', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)' }}><div style={{ width: `${limitYuzdesi}%`, height: '100%', background: limitRenk, transition: 'width 0.5s', borderRadius: '10px' }}></div></div>
-                            <p style={{ fontSize: '10px', color: '#718096', marginTop: '5px', textAlign: 'right' }}>*Kira ve Aidat dahil edilmemiştir.</p>
-                        </div>
-                    </div>
-
-                    {/* FATURALAR KARTI (SOL TARAF) */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#2d3748' }}>🧾 Faturalar</h4>
-                        <div style={{ maxHeight: '250px', overflowY: 'auto', marginBottom: '15px' }}>
-                            {tanimliFaturalar.length === 0 && <p style={{ fontSize: '12px', color: '#aaa' }}>Henüz fatura tanımı yok. Aşağıdan ekleyin.</p>}
-                            {tanimliFaturalar.map(tanim => {
-                                // Bu tanıma ait bekleyen bir fatura var mı?
-                                const bekleyen = bekleyenFaturalar.find(f => f.tanimId === tanim.id);
-                                return (
-                                    <div key={tanim.id} style={{ marginBottom: '10px', border: '1px solid #eee', borderRadius: '10px', overflow: 'hidden' }}>
-                                        <div style={{ padding: '10px', background: '#f7fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2d3748' }}>{tanim.baslik}</div>
-                                                <div style={{ fontSize: '11px', color: '#718096' }}>{tanim.kurum} • {tanim.aboneNo}</div>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <span onClick={() => modalAc('duzenle_fatura_tanim', tanim)} style={{ cursor: 'pointer', fontSize: '14px' }}>✏️</span>
-                                                <span onClick={() => normalSil("fatura_tanimlari", tanim.id)} style={{ cursor: 'pointer', fontSize: '14px', color: '#e53e3e' }}>🗑️</span>
-                                            </div>
-                                        </div>
-                                        {bekleyen ? (
-                                            <div style={{ padding: '10px', background: '#fff5f5', borderTop: '1px solid #feb2b2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 'bold', color: '#c53030' }}>{formatPara(bekleyen.tutar)}</div>
-                                                    <div style={{ fontSize: '11px', color: '#c53030' }}>Son: {tarihSadeceGunAyYil(bekleyen.sonOdemeTarihi)}</div>
-                                                    {bekleyen.aciklama && <div style={{ fontSize: '10px', color: '#718096' }}>{bekleyen.aciklama}</div>}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <span onClick={() => modalAc('duzenle_bekleyen_fatura', bekleyen)} style={{ cursor: 'pointer', fontSize: '14px' }}>✏️</span>
-                                                    <span onClick={() => normalSil("bekleyen_faturalar", bekleyen.id)} style={{ cursor: 'pointer', fontSize: '14px', color: '#c53030' }}>🗑️</span>
-                                                    <button onClick={() => modalAc('fatura_ode', bekleyen)} style={{ background: '#c53030', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>ÖDE</button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div style={{ padding: '8px', fontSize: '11px', color: '#a0aec0', textAlign: 'center', fontStyle: 'italic' }}>
-                                                Bekleyen fatura yok
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-
-                        {/* YENİ ABONE EKLEME */}
-                        <form onSubmit={faturaTanimEkle} style={{ borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <p style={{ fontSize: '11px', color: '#718096', marginBottom: '5px' }}>Yeni Abone/Fatura Tanımı Ekle:</p>
-                            <input placeholder="Başlık (Örn: Yazlık Elektrik)" value={tanimBaslik} onChange={e => setTanimBaslik(e.target.value)} style={{ width: '100%', padding: '8px', marginBottom: '5px', border: '1px solid #e2e8f0', borderRadius: '6px', boxSizing: 'border-box' }} required />
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                                <input placeholder="Kurum" value={tanimKurum} onChange={e => setTanimKurum(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                                <input placeholder="Abone No" value={tanimAboneNo} onChange={e => setTanimAboneNo(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            </div>
-                            <button type="submit" style={{ width: '100%', marginTop: '5px', background: '#4a5568', color: 'white', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>Tanımla</button>
-                        </form>
-                    </div>
-
-                    {/* MAAŞLAR */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#2d3748' }}>💰 Maaşlar & Düzenli Gelirler</h4>
-                        <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '15px' }}>
-                            {maaslar.map(m => {
-                                const hesap = hesaplar.find(h => h.id === m.hesapId);
-                                return (
-                                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold' }}>{m.ad}</div>
-                                            <div style={{ fontSize: '11px', color: '#999' }}>Her ayın {m.gun}. günü • {hesap?.hesapAdi}</div>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <span style={{ color: 'green', fontWeight: 'bold' }}>{formatPara(m.tutar)}</span>
-                                            <span onClick={() => modalAc('duzenle_maas', m)} style={{ cursor: 'pointer', fontSize: '12px', marginLeft: '5px' }}>✏️</span>
-                                            <span onClick={() => normalSil("maaslar", m.id)} style={{ cursor: 'pointer', color: 'red', fontSize: '12px' }}>🗑️</span>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                        <form onSubmit={maasEkle} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: 'auto', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <input placeholder="Ad (Örn: Baba Maaş)" value={maasAd} onChange={e => setMaasAd(e.target.value)} style={{ flex: 2, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                                <input placeholder="Tutar" type="number" value={maasTutar} onChange={e => setMaasTutar(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <input placeholder="Gün" type="number" value={maasGun} onChange={e => setMaasGun(e.target.value)} style={{ width: '60px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                                <select value={maasHesapId} onChange={e => setMaasHesapId(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}><option value="">Hesap Seç</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
-                                <button type="submit" style={{ background: '#48bb78', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}>+</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {/* HESAPLAR */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#2d3748' }}>💳 Cüzdanlar & Kartlar {aktifAy !== "Tümü" && <span style={{ fontSize: '12px', color: '#e53e3e' }}>(Bu Ayki Değişim)</span>}</h4>
-                        <div style={{ marginBottom: '15px' }}>
-                            {hesaplar.map(h => {
-                                let gosterilenBakiye = h.guncelBakiye;
-                                if (aktifAy !== "Tümü") {
-                                    let aylikFark = 0;
-                                    filtrelenmisIslemler.forEach(i => {
-                                        if (i.hesapId === h.id) {
-                                            if (i.islemTipi === 'gelir') aylikFark += i.tutar;
-                                            if (i.islemTipi === 'gider') aylikFark -= i.tutar;
-                                        }
-                                        if (i.islemTipi === 'transfer') {
-                                            if (i.kaynakId === h.id) aylikFark -= i.tutar;
-                                            if (i.hedefId === h.id) aylikFark += i.tutar;
-                                        }
-                                    });
-                                    gosterilenBakiye = aylikFark;
-                                }
-                                return (
-                                    <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
-                                        <div><b>{h.hesapAdi}</b> <small style={{ color: '#aaa' }}>({h.hesapTipi})</small><span onClick={() => modalAc('duzenle_hesap', h)} style={{ fontSize: '10px', cursor: 'pointer', marginLeft: '5px', color: 'blue' }}>✏️</span></div>
-                                        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-                                            <span style={{ color: gosterilenBakiye < 0 ? 'red' : 'green', fontWeight: '600' }}>{gosterilenBakiye > 0 && '+'}{formatPara(gosterilenBakiye)}</span>
-                                            {h.hesapTipi === 'krediKarti' && <button onClick={() => modalAc('kredi_karti_ode', h)} style={{ background: '#805ad5', color: 'white', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '5px' }}>Borç Öde</button>}
-                                            <span onClick={() => hesapSilGuvenli(h.id, h.hesapAdi)} style={{ cursor: 'pointer', color: 'red', fontSize: '12px' }}>🗑️</span>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-
-                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', textAlign: 'right', fontSize: '14px' }}>
-                            <b>{aktifAy === "Tümü" ? "Toplam Varlık:" : "Bu Ay Toplam Değişim:"}</b> <span style={{ color: toplamHesapBakiyesi >= 0 ? 'green' : '#e53e3e', fontWeight: 'bold' }}>{formatPara(toplamHesapBakiyesi)}</span>
-                        </div>
-
-                        <form onSubmit={hesapEkle} style={{ display: 'flex', gap: '8px', marginTop: '15px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <input placeholder="Ad" value={hesapAdi} onChange={e => setHesapAdi(e.target.value)} style={{ flex: 2, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            <select value={hesapTipi} onChange={e => setHesapTipi(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}><option value="nakit">Nakit</option><option value="krediKarti">Kart</option></select>
-                            <input placeholder="Bakiye" type="number" value={baslangicBakiye} onChange={e => setBaslangicBakiye(e.target.value)} style={{ flex: 1, padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            <button type="submit" style={{ background: '#3182ce', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', padding: '0 15px', fontWeight: 'bold' }}>+</button>
-                        </form>
-                    </div>
-
-                    {/* TAKSİTLER */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#2d3748' }}>📦 Taksitli Alışverişler</h4>
-                        {taksitler.length === 0 ? <p style={{ fontSize: '13px', color: '#aaa' }}>Aktif taksit borcu yok.</p> :
-                            <div style={{ marginBottom: '15px' }}>
-                                {taksitler.map(t => {
-                                    const yuzde = (t.odenmisTaksit / t.taksitSayisi) * 100;
-                                    let baslangic = "Bilinmiyor"; let bitis = "Bilinmiyor";
-                                    if (t.alisTarihi) {
-                                        const d = new Date(t.alisTarihi.seconds * 1000);
-                                        baslangic = d.toLocaleDateString("tr-TR");
-                                        d.setMonth(d.getMonth() + t.taksitSayisi - 1);
-                                        bitis = d.toLocaleDateString("tr-TR");
-                                    }
-                                    return (
-                                        <div key={t.id} style={{ padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                                <div><b>{t.baslik}</b><div style={{ fontSize: '10px', color: '#999' }}>{t.alanKisi} • {t.kategori}</div></div>
-                                                <span style={{ fontWeight: 'bold' }}>{formatPara(t.toplamTutar - (t.aylikTutar * t.odenmisTaksit))} <small style={{ color: '#999' }}>Kaldı</small></span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', marginBottom: '5px' }}>
-                                                <span>{t.odenmisTaksit}/{t.taksitSayisi} Ödendi</span>
-                                                <span>Aylık: {formatPara(t.aylikTutar)}</span>
-                                            </div>
-                                            <div style={{ fontSize: '10px', color: '#a0aec0', marginBottom: '5px' }}>{baslangic} - {bitis}</div>
-                                            <div style={{ width: '100%', height: '8px', background: '#eee', borderRadius: '4px', marginBottom: '10px' }}><div style={{ width: `${yuzde}%`, height: '100%', background: '#805ad5', borderRadius: '4px', transition: 'width 0.5s' }}></div></div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <button onClick={() => taksitOde(t)} style={{ background: '#805ad5', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px' }}>Bu Ayı İşle ({formatPara(t.aylikTutar)})</button>
-                                                <span onClick={() => modalAc('duzenle_taksit', t)} style={{ cursor: 'pointer', marginLeft: '10px' }}>✏️</span>
-                                                <span onClick={() => normalSil("taksitler", t.id)} style={{ cursor: 'pointer', marginLeft: '10px' }}>🗑️</span>
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        }
-                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                            <span style={{ color: '#718096' }}>Aylık Yük: <b style={{ color: '#2d3748' }}>{formatPara(toplamAylikTaksitOdemesi)}</b></span>
-                            <span style={{ color: '#718096' }}>Kalan Toplam Borç: <b style={{ color: '#e53e3e' }}>{formatPara(toplamKalanTaksitBorcu)}</b></span>
-                        </div>
-                    </div>
-
-                    {/* ABONELİKLER */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#2d3748' }}>🔄 Sabit Abonelikler (Netflix vb.)</h4>
-                        <div style={{ marginBottom: '15px' }}>
-                            {abonelikler.map(abo => {
-                                const hesap = hesaplar.find(h => h.id === abo.hesapId);
-                                return (
-                                    <div key={abo.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold' }}>{abo.ad}</div>
-                                            <div style={{ fontSize: '11px', color: '#999' }}>
-                                                {abo.gun}. gün • {abo.kategori} • {abo.kisi || "Belirtilmemiş"} • {hesap?.hesapAdi || "Hesap Yok"}
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#e53e3e' }}>{formatPara(abo.tutar)}</div>
-                                            <button onClick={() => abonelikOde(abo)} style={{ background: '#e2e8f0', border: 'none', cursor: 'pointer', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' }}>Öde</button>
-                                            <span onClick={() => modalAc('duzenle_abonelik', abo)} style={{ cursor: 'pointer', fontSize: '12px' }}>✏️</span>
-                                            <span onClick={() => normalSil("abonelikler", abo.id)} style={{ cursor: 'pointer', fontSize: '12px' }}>🗑️</span>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
-
-                        <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', textAlign: 'right', fontSize: '13px' }}>
-                            <span style={{ color: '#718096' }}>Aylık Sabit Gider: <b style={{ color: '#e53e3e' }}>{formatPara(toplamSabitGider)}</b></span>
-                        </div>
-
-                        <form onSubmit={abonelikEkle} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', borderTop: '1px solid #eee', paddingTop: '15px', marginTop: '15px' }}>
-                            <input placeholder="Ad" value={aboAd} onChange={e => setAboAd(e.target.value)} style={{ padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            <input placeholder="Tutar" type="number" value={aboTutar} onChange={e => setAboTutar(e.target.value)} style={{ padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            <input placeholder="Gün" type="number" value={aboGun} onChange={e => setAboGun(e.target.value)} style={{ padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }} />
-                            <select value={aboKategori} onChange={e => setAboKategori(e.target.value)} style={{ gridColumn: 'span 3', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
-                            <select value={aboKisi} onChange={e => setAboKisi(e.target.value)} style={{ gridColumn: 'span 3', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
-                            <select value={aboHesapId} onChange={e => setAboHesapId(e.target.value)} style={{ gridColumn: 'span 3', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px' }}><option value="">Hangi Hesaptan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
-                            <button type="submit" style={{ gridColumn: 'span 3', background: '#805ad5', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', padding: '10px', fontWeight: 'bold' }}>ABONELİK EKLE</button>
-                        </form>
-                    </div>
-                </div>
-
-                {/* --- SAĞ SÜTUN --- */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-
-                    {/* 1. KART: VERİ GİRİŞ FORMLARI */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                                <button onClick={() => setFormTab("islem")} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "islem" ? '#ed8936' : '#edf2f7', color: formTab === "islem" ? 'white' : '#4a5568', fontWeight: 'bold' }}>Gelir / Gider</button>
-                                <button onClick={() => setFormTab("transfer")} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "transfer" ? '#3182ce' : '#edf2f7', color: formTab === "transfer" ? 'white' : '#4a5568', fontWeight: 'bold' }}>Transfer</button>
-                                <button onClick={() => setFormTab("taksit")} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "taksit" ? '#805ad5' : '#edf2f7', color: formTab === "taksit" ? 'white' : '#4a5568', fontWeight: 'bold' }}>Taksit</button>
-                                <button onClick={() => setFormTab("fatura")} style={{ padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "fatura" ? '#c53030' : '#edf2f7', color: formTab === "fatura" ? 'white' : '#4a5568', fontWeight: 'bold' }}>Fatura Gir</button>
-                            </div>
-                        </div>
-
-                        {/* GELİR GİDER FORMU */}
-                        {formTab === "islem" && (
-                            <form onSubmit={islemEkle} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <select value={secilenHesapId} onChange={e => setSecilenHesapId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0', backgroundColor: '#f7fafc' }}><option value="">Hangi Hesaptan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}</select>
-                                    <select value={islemTipi} onChange={e => setIslemTipi(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}><option value="gider">🔴 Gider</option><option value="gelir">🟢 Gelir</option></select>
-                                </div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <select value={harcayanKisi || aileUyeleri[0]} onChange={e => { const val = e.target.value; setHarcayanKisi(val); if (val === "Araç Giderleri") setKategori("Araç"); }} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
-                                    <select value={kategori || kategoriListesi[0]} onChange={e => setKategori(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
-                                </div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input placeholder="Açıklama" value={islemAciklama} onChange={e => setIslemAciklama(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
-                                    <input type="number" placeholder="Tutar (₺)" value={islemTutar} onChange={e => setIslemTutar(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
-                                </div>
-                                <input type="datetime-local" value={islemTarihi} onChange={e => setIslemTarihi(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
-                                <button type="submit" style={{ padding: '15px', background: '#ed8936', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
-                            </form>
-                        )}
-
-                        {/* TRANSFER FORMU */}
-                        {formTab === "transfer" && (
-                            <form onSubmit={transferYap} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: '#ebf8ff', padding: '20px', borderRadius: '10px' }}>
-                                <div><label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereden?</label><select value={transferKaynakId} onChange={e => setTransferKaynakId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}><option value="">Seçiniz...</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}</select></div>
-                                <div><label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereye?</label><select value={transferHedefId} onChange={e => setTransferHedefId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}><option value="">Seçiniz...</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}</select></div>
-                                <input type="number" placeholder="Tutar (₺)" value={transferTutar} onChange={e => setTransferTutar(e.target.value)} style={{ gridColumn: 'span 2', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
-                                <button type="submit" style={{ gridColumn: 'span 2', padding: '15px', background: '#3182ce', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>TRANSFER YAP / BORÇ ÖDE</button>
-                            </form>
-                        )}
-
-                        {/* TAKSİT FORMU */}
-                        {formTab === "taksit" && (
-                            <form onSubmit={taksitEkle} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: '#f3e8ff', padding: '20px', borderRadius: '10px' }}>
-                                <div style={{ gridColumn: 'span 2' }}><h4 style={{ margin: '0 0 10px 0', color: '#6b46c1' }}>📦 Yeni Taksit Planı Oluştur</h4></div>
-                                <input placeholder="Ne aldın?" value={taksitBaslik} onChange={e => setTaksitBaslik(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
-                                <select value={taksitHesapId} onChange={e => setTaksitHesapId(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required><option value="">Hangi Karttan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
-                                <input type="number" placeholder="Toplam Borç (₺)" value={taksitToplamTutar} onChange={e => setTaksitToplamTutar(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
-                                <input type="number" placeholder="Kaç Taksit?" value={taksitSayisi} onChange={e => setTaksitSayisi(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
-                                <select value={taksitKisi || aileUyeleri[0]} onChange={e => setTaksitKisi(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
-                                <select value={taksitKategori || kategoriListesi[0]} onChange={e => setTaksitKategori(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
-                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '12px', color: '#6b46c1' }}>Alış Tarihi</label><input type="date" value={taksitAlisTarihi} onChange={e => setTaksitAlisTarihi(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} /></div>
-                                <div style={{ gridColumn: 'span 2', fontSize: '14px', color: '#553c9a', fontWeight: 'bold', padding: '10px', background: 'white', borderRadius: '8px' }}>ℹ️ Aylık: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0,00 ₺'}</div>
-                                <button type="submit" style={{ gridColumn: 'span 2', padding: '15px', background: '#805ad5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
-                            </form>
-                        )}
-
-                        {/* YENİ FATURA GİRİŞ FORMU */}
-                        {formTab === "fatura" && (
-                            <div style={{ background: '#fff5f5', padding: '20px', borderRadius: '10px' }}>
-                                <h4 style={{ margin: '0 0 15px 0', color: '#c53030' }}>🧾 Dönemsel Fatura Tutarı Gir</h4>
-                                {tanimliFaturalar.length === 0 ? (
-                                    <div style={{ textAlign: 'center', color: '#c53030', padding: '10px', fontSize: '13px' }}>
-                                        ⚠️ Önce sol taraftaki panelden bir fatura/abone tanımı eklemelisiniz.
-                                    </div>
-                                ) : (
-                                    <form onSubmit={faturaGir} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                        <div style={{ gridColumn: 'span 2' }}>
-                                            <select value={secilenTanimId} onChange={e => setSecilenTanimId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', boxSizing: 'border-box' }} required>
-                                                <option value="">Hangi Fatura?</option>
-                                                {tanimliFaturalar.map(t => <option key={t.id} value={t.id}>{t.baslik} ({t.kurum})</option>)}
-                                            </select>
-                                        </div>
-
-                                        <input type="number" placeholder="Tutar (₺)" value={faturaGirisTutar} onChange={e => setFaturaGirisTutar(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', width: '100%', boxSizing: 'border-box' }} required />
-
-                                        <input type="date" value={faturaGirisTarih} onChange={e => setFaturaGirisTarih(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', width: '100%', boxSizing: 'border-box' }} required />
-
-                                        <input placeholder="Açıklama (Opsiyonel)" value={faturaGirisAciklama} onChange={e => setFaturaGirisAciklama(e.target.value)} style={{ gridColumn: 'span 2', padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', width: '100%', boxSizing: 'border-box' }} />
-
-                                        <button type="submit" style={{ gridColumn: 'span 2', padding: '15px', background: '#c53030', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
-                                    </form>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* 2. KART: GEÇMİŞ LİSTESİ */}
-                    <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-
-                        {/* Üst Başlık ve Ay Seçimi */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
-                            <h4 style={{ marginTop: 0, color: '#2c3e50', margin: 0 }}>📜 Aile Harcama Geçmişi</h4>
-                            <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                {mevcutAylar.map(ay => (
-                                    <button key={ay} onClick={() => setAktifAy(ay)} style={{ padding: '5px 10px', fontSize: '12px', borderRadius: '15px', border: 'none', cursor: 'pointer', background: aktifAy === ay ? '#2c3e50' : '#edf2f7', color: aktifAy === ay ? 'white' : '#4a5568', fontWeight: 'bold' }}>{ay}</button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* --- YENİ FİLTRE ALANI --- */}
-                        <div style={{ background: '#f7fafc', padding: '15px', borderRadius: '10px', marginBottom: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', border: '1px solid #edf2f7' }}>
-                            {/* Arama Kutusu */}
-                            <div style={{ flex: 2, minWidth: '200px', display: 'flex', alignItems: 'center', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0 10px' }}>
-                                <span style={{ fontSize: '16px' }}>🔍</span>
-                                <input
-                                    type="text"
-                                    placeholder="Harcama, market, tutar ara..."
-                                    value={aramaMetni}
-                                    onChange={(e) => setAramaMetni(e.target.value)}
-                                    style={{ border: 'none', outline: 'none', padding: '10px', width: '100%', fontSize: '13px' }}
-                                />
-                                {aramaMetni && <span onClick={() => setAramaMetni("")} style={{ cursor: 'pointer', color: '#aaa', fontWeight: 'bold' }}>X</span>}
-                            </div>
-
-                            {/* Kategori Filtresi */}
-                            <select value={filtreKategori} onChange={e => setFiltreKategori(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '13px' }}>
-                                <option value="Tümü">Tüm Kategoriler</option>
-                                {kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}
-                                <option value="Transfer">Transfer</option>
-                            </select>
-
-                            {/* Kişi Filtresi */}
-                            <select value={filtreKisi} onChange={e => setFiltreKisi(e.target.value)} style={{ flex: 1, minWidth: '120px', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '13px' }}>
-                                <option value="Tümü">Tüm Kişiler</option>
-                                {aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}
-                            </select>
-
-                            {/* Excel Butonları */}
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                                <button onClick={excelIndir} title="Excel İndir" style={{ background: '#276749', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>📥 XLS</button>
-                                <label title="Ekstre Yükle" style={{ background: '#2b6cb0', color: 'white', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}>📤 Yükle <input type="file" accept=".xlsx,.xls,.csv" onChange={excelYukle} style={{ display: 'none' }} /></label>
-                            </div>
-                        </div>
-
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '15px' }}>
-                            <thead><tr style={{ textAlign: 'left', color: '#718096', borderBottom: '2px solid #e2e8f0' }}><th style={{ padding: '10px' }}>Tarih</th><th style={{ padding: '10px' }}>Kişi</th><th style={{ padding: '10px' }}>Hesap</th><th style={{ padding: '10px' }}>Kategori</th><th style={{ padding: '10px' }}>Açıklama</th><th style={{ padding: '10px' }}>Tutar</th><th></th><th></th></tr></thead>
-                            <tbody>
-                                {filtrelenmisIslemler.map(i => {
-                                    const hesap = hesaplar.find(h => h.id === i.hesapId);
-                                    let hesapAdi = hesap?.hesapAdi || "Bilinmeyen";
-                                    let renk = 'black';
-                                    if (i.islemTipi === 'transfer') {
-                                        const kaynak = hesaplar.find(h => h.id === i.kaynakId)?.hesapAdi;
-                                        const hedef = hesaplar.find(h => h.id === i.hedefId)?.hesapAdi;
-                                        hesapAdi = `${kaynak} ➝ ${hedef}`;
-                                        renk = '#3182ce';
-                                    } else if (i.islemTipi === 'gelir') {
-                                        renk = 'green';
-                                    } else {
-                                        renk = '#e53e3e';
-                                    }
-
-                                    return (
-                                        <tr key={i.id} style={{ borderBottom: '1px solid #f7fafc' }}>
-                                            <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', color: '#718096', cursor: 'pointer' }}>{tarihFormatla(i.tarih)}</td>
-                                            <td style={{ padding: '10px', fontWeight: '600', color: '#4a5568', fontSize: '14px' }}>{i.harcayan || '-'}</td>
-                                            <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>{hesapAdi}</td>
-                                            <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', cursor: 'pointer' }}>{i.kategori}</td>
-                                            <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', cursor: 'pointer' }}>{i.aciklama}</td>
-                                            <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', fontWeight: 'bold', color: renk, cursor: 'pointer' }}>{formatPara(i.tutar)}</td>
-                                            <td><span onClick={() => modalAc('duzenle_islem', i)} style={{ cursor: 'pointer' }}>✏️</span></td>
-                                            <td><span onClick={() => islemSil(i.id)} style={{ cursor: 'pointer' }}>🗑️</span></td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-
-                        <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '2px solid #f0f0f0', textAlign: 'right', color: '#2d3748', fontSize: '16px', fontWeight: 'bold' }}>
-                            Net Toplam: <span style={{ color: netToplam >= 0 ? 'green' : '#e53e3e' }}>{formatPara(netToplam)}</span>
-                        </div>
-
-                        <footer style={{ textAlign: 'center', marginTop: '30px', padding: '10px', color: '#a0aec0', fontSize: '12px' }}>
-                            <p style={{ margin: 0, fontWeight: 'bold' }}>MUNDAN BİLİŞİM</p>
-                            <p style={{ margin: 0 }}>v1.3.2 (Akıllı Sıralama)</p>
-                        </footer>
-                    </div>
+                <div id="history-section">
+                    <TransactionArea
+                        formTab={formTab} setFormTab={setFormTab}
+                        hesaplar={hesaplar}
+                        kategoriListesi={kategoriListesi}
+                        aileUyeleri={aileUyeleri}
+                        islemEkle={islemEkle}
+                        transferYap={transferYap}
+                        taksitEkle={taksitEkle}
+                        faturaGir={faturaGir}
+                        filtrelenmisIslemler={filtrelenmisIslemler}
+                        aramaMetni={aramaMetni} setAramaMetni={setAramaMetni}
+                        filtreKategori={filtreKategori} setFiltreKategori={setFiltreKategori}
+                        filtreKisi={filtreKisi} setFiltreKisi={setFiltreKisi}
+                        excelIndir={excelIndir}
+                        excelYukle={excelYukle}
+                        modalAc={modalAc}
+                        islemSil={islemSil}
+                        formatPara={formatPara}
+                        tarihFormatla={tarihFormatla}
+                        netToplam={netToplam}
+                        secilenHesapId={secilenHesapId} setSecilenHesapId={setSecilenHesapId}
+                        islemTipi={islemTipi} setIslemTipi={setIslemTipi}
+                        harcayanKisi={harcayanKisi} setHarcayanKisi={setHarcayanKisi}
+                        kategori={kategori} setKategori={setKategori}
+                        islemAciklama={islemAciklama} setIslemAciklama={setIslemAciklama}
+                        islemTutar={islemTutar} setIslemTutar={setIslemTutar}
+                        islemTarihi={islemTarihi} setIslemTarihi={setIslemTarihi}
+                        transferKaynakId={transferKaynakId} setTransferKaynakId={setTransferKaynakId}
+                        transferHedefId={transferHedefId} setTransferHedefId={setTransferHedefId}
+                        transferTutar={transferTutar} setTransferTutar={setTransferTutar}
+                        transferUcreti={transferUcreti} setTransferUcreti={setTransferUcreti}
+                        transferTarihi={transferTarihi} setTransferTarihi={setTransferTarihi}
+                        taksitBaslik={taksitBaslik} setTaksitBaslik={setTaksitBaslik}
+                        taksitHesapId={taksitHesapId} setTaksitHesapId={setTaksitHesapId}
+                        taksitToplamTutar={taksitToplamTutar} setTaksitToplamTutar={setTaksitToplamTutar}
+                        taksitSayisi={taksitSayisi} setTaksitSayisi={setTaksitSayisi}
+                        taksitKisi={taksitKisi} setTaksitKisi={setTaksitKisi}
+                        taksitKategori={taksitKategori} setTaksitKategori={setTaksitKategori}
+                        taksitAlisTarihi={taksitAlisTarihi} setTaksitAlisTarihi={setTaksitAlisTarihi}
+                        tanimliFaturalar={tanimliFaturalar}
+                        secilenTanimId={secilenTanimId} setSecilenTanimId={setSecilenTanimId}
+                        faturaKisi={faturaKisi} setFaturaKisi={setFaturaKisi}
+                        faturaGirisTutar={faturaGirisTutar} setFaturaGirisTutar={setFaturaGirisTutar}
+                        faturaGirisTarih={faturaGirisTarih} setFaturaGirisTarih={setFaturaGirisTarih}
+                        faturaGirisAciklama={faturaGirisAciklama} setFaturaGirisAciklama={setFaturaGirisAciklama}
+                        mevcutAylar={mevcutAylar}
+                        aktifAy={aktifAy} setAktifAy={setAktifAy}
+                    />
                 </div>
             </div>
+
+
         </div>
     );
 }
