@@ -99,7 +99,7 @@ const Sidebar = ({
             {/* HESAPLAR */}
             <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h4 style={{ margin: 0, color: '#2d3748' }}>💳 Cüzdanlar & Kartlar {aktifAy !== "Tümü" && <span style={{ fontSize: '12px', color: '#e53e3e' }}>(Bu Ayki Değişim)</span>}</h4>
+                    <h4 style={{ margin: 0, color: '#2d3748' }}>💳 Cüzdanlar & Kartlar</h4>
                     <button onClick={() => modalAc('yeni_hesap')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#3182ce', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
@@ -107,20 +107,6 @@ const Sidebar = ({
                 <div style={{ marginBottom: '15px' }}>
                     {hesaplar.map(h => {
                         let gosterilenBakiye = h.guncelBakiye;
-                        if (aktifAy !== "Tümü") {
-                            let aylikFark = 0;
-                            filtrelenmisIslemler.forEach(i => {
-                                if (i.hesapId === h.id) {
-                                    if (i.islemTipi === 'gelir') aylikFark += i.tutar;
-                                    if (i.islemTipi === 'gider') aylikFark -= i.tutar;
-                                }
-                                if (i.islemTipi === 'transfer') {
-                                    if (i.kaynakId === h.id) aylikFark -= i.tutar;
-                                    if (i.hedefId === h.id) aylikFark += i.tutar;
-                                }
-                            });
-                            gosterilenBakiye = aylikFark;
-                        }
                         return (
                             <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
                                 <div><b>{h.hesapAdi}</b> <small style={{ color: '#aaa' }}>({h.hesapTipi})</small><span onClick={() => modalAc('duzenle_hesap', h)} style={{ fontSize: '10px', cursor: 'pointer', marginLeft: '5px', color: 'blue' }}>✏️</span></div>
@@ -141,12 +127,7 @@ const Sidebar = ({
                             {formatPara(netVarlik)}
                         </span>
                     </div>
-                    {aktifAy !== "Tümü" && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#718096' }}>
-                            <span>Bu Ay Değişim:</span>
-                            <span style={{ color: toplamHesapBakiyesi >= 0 ? 'green' : '#e53e3e', fontWeight: 'bold' }}>{formatPara(toplamHesapBakiyesi)}</span>
-                        </div>
-                    )}
+
                 </div>
             </div>
 

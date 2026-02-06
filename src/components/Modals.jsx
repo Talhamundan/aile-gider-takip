@@ -234,6 +234,36 @@ const Modals = ({
 
 }) => {
 
+    // --- SİLME ONAY MODALI İÇİN STATE ---
+    const [deleteModal, setDeleteModal] = useState({ show: false, type: null, item: null });
+
+    const handleDeleteRequest = (type, item) => {
+        setDeleteModal({ show: true, type, item });
+    };
+
+    const confirmDelete = () => {
+        const { type, item } = deleteModal;
+        if (!item) return;
+
+        if (type === 'member') {
+            const y = aileUyeleri.filter(x => x !== item);
+            setAileUyeleri(y);
+            setDoc(doc(db, "ayarlar", aileKodu), { aileUyeleri: y }, { merge: true });
+            toast.info(`${item} silindi.`);
+        } else if (type === 'category') {
+            const y = kategoriListesi.filter(x => x !== item);
+            setKategoriListesi(y);
+            setDoc(doc(db, "ayarlar", aileKodu), { kategoriler: y }, { merge: true });
+            toast.info(`${item} kategorisi silindi.`);
+        }
+        setDeleteModal({ show: false, type: null, item: null });
+    };
+
+    const cancelDelete = () => {
+        setDeleteModal({ show: false, type: null, item: null });
+    };
+
+
     if (!aktifModal) return null;
 
     // Ortak Stiller
@@ -443,7 +473,7 @@ const Modals = ({
                     <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '15px 0' }} />
                     <h4 style={{ margin: '0 0 10px 0' }}>👨‍👩‍👧‍👦 Aile Bireyleri</h4>
                     <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {aileUyeleri.map(k => (<li key={k} style={{ background: '#edf2f7', padding: '4px 8px', borderRadius: '12px', fontSize: '13px' }}>{k} <span onClick={() => { if (window.confirm("Silinsin mi?")) { const y = aileUyeleri.filter(x => x !== k); setAileUyeleri(y); setDoc(doc(db, "ayarlar", aileKodu), { aileUyeleri: y }, { merge: true }); } }} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}
+                        {aileUyeleri.map(k => (<li key={k} style={{ background: '#edf2f7', padding: '4px 8px', borderRadius: '12px', fontSize: '13px' }}>{k} <span onClick={() => handleDeleteRequest('member', k)} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}
                     </ul>
                     <form onSubmit={(e) => { e.preventDefault(); if (!yeniKisiAdi) return; const y = [...aileUyeleri, yeniKisiAdi]; setAileUyeleri(y); setDoc(doc(db, "ayarlar", aileKodu), { aileUyeleri: y }, { merge: true }); setYeniKisiAdi(""); toast.success("Kişi eklendi"); }} style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
                         <input value={yeniKisiAdi} onChange={e => setYeniKisiAdi(e.target.value)} placeholder="Yeni Kişi Adı" style={{ ...inputStyle, padding: '8px', fontSize: '13px', marginBottom: '10px' }} />
@@ -453,7 +483,7 @@ const Modals = ({
                     <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '15px 0' }} />
                     <h4 style={{ margin: '0 0 10px 0' }}>📂 Kategoriler</h4>
                     <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {kategoriListesi.map(k => (<li key={k} style={{ background: '#f0fff4', padding: '4px 8px', borderRadius: '12px', fontSize: '13px' }}>{k} <span onClick={() => { if (window.confirm("Silinsin mi?")) { const y = kategoriListesi.filter(x => x !== k); setKategoriListesi(y); setDoc(doc(db, "ayarlar", aileKodu), { kategoriler: y }, { merge: true }); } }} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}
+                        {kategoriListesi.map(k => (<li key={k} style={{ background: '#f0fff4', padding: '4px 8px', borderRadius: '12px', fontSize: '13px' }}>{k} <span onClick={() => handleDeleteRequest('category', k)} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}
                     </ul>
                     <form onSubmit={(e) => { e.preventDefault(); if (!yeniKategoriAdi) return; const y = [...kategoriListesi, yeniKategoriAdi]; setKategoriListesi(y); setDoc(doc(db, "ayarlar", aileKodu), { kategoriler: y }, { merge: true }); setYeniKategoriAdi(""); toast.success("Kategori eklendi"); }} style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
                         <input value={yeniKategoriAdi} onChange={e => setYeniKategoriAdi(e.target.value)} placeholder="Yeni Kategori" style={{ ...inputStyle, padding: '8px', fontSize: '13px', marginBottom: '10px' }} />
@@ -470,7 +500,108 @@ const Modals = ({
                     </div>
                 </div>}
             </div>
+
+            {/* SİLME ONAY MODALI (OVERLAY) */}
+            {deleteModal.show && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0,
+                    width: '100%', height: '100%',
+                    background: 'rgba(0,0,0,0.6)', // Arkası daha karanlık
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1001 // Ayarlar modalının üstünde
+                }}>
+                    <div style={{
+                        background: 'white',
+                        padding: '30px',
+                        borderRadius: '20px',
+                        width: '90%',
+                        maxWidth: '350px',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                        animation: 'fadeIn 0.2s ease-out',
+                        fontFamily: "'Georgia', 'Times New Roman', serif"
+                    }}>
+                        <div style={{
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '50%',
+                            background: '#fee2e2',
+                            color: '#e53e3e',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '24px',
+                            margin: '0 auto 20px auto'
+                        }}>
+                            !
+                        </div>
+
+                        <h3 style={{
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            color: '#1a202c',
+                            marginBottom: '10px'
+                        }}>
+                            {deleteModal.type === 'category'
+                                ? `${deleteModal.item} kategorisini silmek istediğinize emin misiniz?`
+                                : `${deleteModal.item} kişisini silmek istediğinize emin misiniz?`}
+                        </h3>
+
+                        <p style={{
+                            fontSize: '14px',
+                            color: '#718096',
+                            marginBottom: '25px',
+                            lineHeight: '1.5'
+                        }}>
+                            Bu {deleteModal.type === 'category' ? 'kategoriye' : 'kişiye'} ait geçmiş veriler silinmeyecektir, sadece listeden kaldırılacaktır.
+                        </p>
+
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                            <button
+                                onClick={cancelDelete}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '25px',
+                                    border: '1px solid #e2e8f0',
+                                    background: '#f7fafc',
+                                    color: '#4a5568',
+                                    fontSize: '15px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    borderRadius: '25px',
+                                    border: 'none',
+                                    background: '#e53e3e',
+                                    color: 'white',
+                                    fontSize: '15px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 6px -1px rgba(229, 62, 62, 0.4)',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                Sil
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+
     );
 };
 

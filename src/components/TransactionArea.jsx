@@ -109,17 +109,17 @@ const TransactionArea = ({
 
                 {/* TAKSİT FORMU */}
                 {formTab === "taksit" && (
-                    <form onSubmit={taksitEkle} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: '#f3e8ff', padding: '20px', borderRadius: '10px' }}>
-                        <div style={{ gridColumn: 'span 2' }}><h4 style={{ margin: '0 0 10px 0', color: '#6b46c1' }}>📦 Yeni Taksit Planı Oluştur</h4></div>
-                        <input placeholder="Ne aldın?" value={taksitBaslik} onChange={e => setTaksitBaslik(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
+                    <form onSubmit={taksitEkle} className="taksit-form-grid">
+                        <div className="span-full"><h4 style={{ margin: '0 0 10px 0', color: '#6b46c1' }}>📦 Yeni Taksit Planı Oluştur</h4></div>
                         <select value={taksitHesapId} onChange={e => setTaksitHesapId(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required><option value="">Hangi Karttan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
+                        <input placeholder="Ne aldın?" value={taksitBaslik} onChange={e => setTaksitBaslik(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
                         <input type="number" placeholder="Toplam Borç (₺)" value={taksitToplamTutar} onChange={e => setTaksitToplamTutar(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
                         <input type="number" placeholder="Kaç Taksit?" value={taksitSayisi} onChange={e => setTaksitSayisi(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
                         <select value={taksitKisi || aileUyeleri[0]} onChange={e => setTaksitKisi(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
                         <select value={taksitKategori || kategoriListesi[0]} onChange={e => setTaksitKategori(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
-                        <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '12px', color: '#6b46c1' }}>Alış Tarihi</label><input type="date" value={taksitAlisTarihi} onChange={e => setTaksitAlisTarihi(e.target.value)} max="9999-12-31" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} /></div>
-                        <div style={{ gridColumn: 'span 2', fontSize: '14px', color: '#553c9a', fontWeight: 'bold', padding: '10px', background: 'white', borderRadius: '8px' }}>ℹ️ Aylık: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0,00 ₺'}</div>
-                        <button type="submit" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", gridColumn: 'span 2', padding: '15px', background: '#805ad5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
+                        <input type="date" value={taksitAlisTarihi} onChange={e => setTaksitAlisTarihi(e.target.value)} max="9999-12-31" className="span-full" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa', boxSizing: 'border-box' }} />
+                        <div className="span-full" style={{ fontSize: '14px', color: '#553c9a', fontWeight: 'bold', padding: '10px', background: 'white', borderRadius: '8px' }}>ℹ️ Aylık: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0,00 ₺'}</div>
+                        <button type="submit" className="span-full" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", padding: '15px', background: '#805ad5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
                     </form>
                 )}
 

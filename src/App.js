@@ -5,7 +5,8 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, increment, q
 import * as XLSX from 'xlsx';
 
 // --- COMPONENTS ---
-import Auth from './components/Auth';
+import LoginScreen from './components/LoginScreen';
+import Feedback from './components/Feedback';
 import Modals from './components/Modals';
 import DashboardStats from './components/DashboardStats';
 import Sidebar from './components/Sidebar';
@@ -910,7 +911,7 @@ function App() {
     const maasDuzenle = async (e) => { e.preventDefault(); await updateDoc(doc(db, "maaslar", seciliVeri.id), { ad: maasAd, tutar: parseFloat(maasTutar), gun: maasGun, hesapId: maasHesapId }); setAktifModal(null); setMaasAd(""); setMaasTutar(""); setMaasGun(""); setMaasHesapId(""); toast.success("Maaş güncellendi"); }
 
     if (loading || !user || !aileKodu) {
-        return <Auth
+        return <LoginScreen
             user={user}
             loading={loading}
             girisYap={girisYap}
@@ -918,6 +919,7 @@ function App() {
             girilenKod={girilenKod}
             setGirilenKod={setGirilenKod}
             aileKoduKaydet={aileKoduKaydet}
+            cikisYap={cikisYap}
         />;
     }
 
@@ -1100,6 +1102,7 @@ function App() {
             </div>
 
 
+            <Feedback userEmail={user?.email} />
         </div>
     );
 }
