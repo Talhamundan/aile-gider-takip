@@ -230,7 +230,19 @@ const Modals = ({
     krediKartiBorcOde,
     faturaOde,
     bekleyenFaturaDuzenle,
-    verileriTasi
+    verileriTasi,
+
+    // Borclar
+    borclar,
+    borcAd, setBorcAd,
+    borcToplamTutar, setBorcToplamTutar,
+    borcKalanTutar, setBorcKalanTutar,
+    borcSonOdemeTarihi, setBorcSonOdemeTarihi,
+    borcOdemeHesapId, setBorcOdemeHesapId,
+    borcOdemeTutar, setBorcOdemeTutar,
+    borcEkle,
+    borcDuzenle,
+    borcOde
 
 }) => {
 
@@ -356,6 +368,20 @@ const Modals = ({
                     <button type="submit" style={getButtonStyle('#805ad5')}>Kaydet</button>
                 </form>}
 
+                {/* YENİ BORÇ EKLE */}
+                {aktifModal === 'yeni_borc' && <form onSubmit={(e) => { borcEkle(e); setAktifModal(null); }}>
+                    <div style={headerStyle}>
+                        <h3 style={titleStyle}>Yeni Borç Tanımla</h3>
+                        <CloseButton />
+                    </div>
+                    <input placeholder="Borç Adı (Örn: Ahmet'ten Borç)" value={borcAd} onChange={e => setBorcAd(e.target.value)} style={inputStyle} required />
+                    <input placeholder="Toplam Borç Tutarı" type="number" step="0.01" value={borcToplamTutar} onChange={e => setBorcToplamTutar(e.target.value)} style={inputStyle} required />
+                    <input placeholder="Kalan Tutar (Boşsa Toplam ile aynı olur)" type="number" step="0.01" value={borcKalanTutar} onChange={e => setBorcKalanTutar(e.target.value)} style={inputStyle} />
+                    <label style={labelStyle}>Son Ödeme Tarihi (Opsiyonel)</label>
+                    <input type="date" value={borcSonOdemeTarihi} onChange={e => setBorcSonOdemeTarihi(e.target.value)} style={inputStyle} />
+                    <button type="submit" style={getButtonStyle('#e53e3e')}>Kaydet</button>
+                </form>}
+
 
                 {/* MEVCUT DÜZENLEME MODALLARI */}
                 {aktifModal === 'duzenle_hesap' && <form onSubmit={hesapDuzenle}>
@@ -418,6 +444,17 @@ const Modals = ({
                     <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
                 </form>}
 
+                {/* BORÇ DÜZENLE */}
+                {aktifModal === 'duzenle_borc' && <form onSubmit={borcDuzenle}>
+                    <div style={headerStyle}><h3 style={titleStyle}>Borç Düzenle</h3><CloseButton /></div>
+                    <input value={borcAd} onChange={e => setBorcAd(e.target.value)} placeholder="Borç Adı" style={inputStyle} required />
+                    <input type="number" step="0.01" value={borcToplamTutar} onChange={e => setBorcToplamTutar(e.target.value)} placeholder="Toplam Borç Tutarı" style={inputStyle} required />
+                    <input type="number" step="0.01" value={borcKalanTutar} onChange={e => setBorcKalanTutar(e.target.value)} placeholder="Kalan Tutar" style={inputStyle} />
+                    <label style={labelStyle}>Son Ödeme Tarihi (Opsiyonel)</label>
+                    <input type="date" value={borcSonOdemeTarihi} onChange={e => setBorcSonOdemeTarihi(e.target.value)} style={inputStyle} />
+                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                </form>}
+
                 {aktifModal === 'kredi_karti_ode' && <KrediKartiBorcOdeModal
                     hesaplar={hesaplar}
                     kkOdemeKartId={kkOdemeKartId}
@@ -433,6 +470,42 @@ const Modals = ({
                     CloseButton={CloseButton}
                     inputStyle={inputStyle}
                 />}
+
+                {/* BORÇ ÖDEME MODALI */}
+                {aktifModal === 'borc_ode' && <form onSubmit={borcOde}>
+                    <div style={headerStyle}><h3 style={titleStyle}>💸 Borç Öde</h3><CloseButton /></div>
+                    {(() => {
+                        const ad = seciliVeri ? seciliVeri.ad : "Borç";
+                        const kalan = seciliVeri ? parseFloat(seciliVeri.kalanTutar) : 0;
+                        return (
+                            <div style={{ marginBottom: '15px' }}>
+                                <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 5px 0' }}>{ad}</p>
+                                <p style={{ color: '#e53e3e', fontSize: '16px', margin: 0 }}>Kalan Borç: <b>{formatPara(kalan)}</b></p>
+                            </div>
+                        )
+                    })()}
+                    <select
+                        value={borcOdemeHesapId}
+                        onChange={e => setBorcOdemeHesapId(e.target.value)}
+                        style={inputStyle}
+                        required
+                    >
+                        <option value="">Hangi Hesaptan Ödenecek?</option>
+                        {hesaplar.map(h => (
+                            <option key={h.id} value={h.id}>{h.hesapAdi} ({formatPara(h.guncelBakiye)})</option>
+                        ))}
+                    </select>
+                    <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Ödenecek Tutar"
+                        value={borcOdemeTutar}
+                        onChange={e => setBorcOdemeTutar(e.target.value)}
+                        style={inputStyle}
+                        required
+                    />
+                    <button type="submit" style={getButtonStyle('#e53e3e')}>Ödemeyi Yap</button>
+                </form>}
 
                 {/* FATURA ÖDEME MODALI */}
                 {aktifModal === 'fatura_ode' && <div style={{ textAlign: 'center' }}>

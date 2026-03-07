@@ -49,7 +49,9 @@ const Sidebar = ({
     aboHesapId, setAboHesapId,
     kategoriListesi,
     aileUyeleri,
-    tarihSadeceGunAyYil
+    tarihSadeceGunAyYil,
+    borclar = [],
+    toplamKalanBorc = 0
 }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
@@ -254,6 +256,47 @@ const Sidebar = ({
 
                 <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', textAlign: 'right', fontSize: '13px' }}>
                     <span style={{ color: '#718096' }}>Aylık Sabit Gider: <b style={{ color: '#e53e3e' }}>{formatPara(toplamSabitGider)}</b></span>
+                </div>
+            </div>
+
+            {/* BORÇLAR KARTI */}
+            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h4 style={{ margin: 0, color: '#2d3748' }}>💸 Borçlar</h4>
+                    <button onClick={() => modalAc('yeni_borc')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#e53e3e', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                        <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Borç Tanımla
+                    </button>
+                </div>
+                {(!borclar || borclar.length === 0) ? <p style={{ fontSize: '13px', color: '#aaa' }}>Aktif borç bulunmuyor.</p> :
+                    <div style={{ marginBottom: '15px' }}>
+                        {borclar.map(b => {
+                            const kalan = parseFloat(b.kalanTutar) || 0;
+                            const toplam = parseFloat(b.toplamTutar) || 0;
+                            const yuzde = toplam > 0 ? ((toplam - kalan) / toplam) * 100 : 0;
+
+                            return (
+                                <div key={b.id} style={{ padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                        <div style={{ fontWeight: 'bold' }}>{b.ad}</div>
+                                        <span style={{ fontWeight: 'bold' }}>{formatPara(kalan)} <small style={{ color: '#999' }}>Kaldı</small></span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', marginBottom: '5px' }}>
+                                        <span>Toplam: {formatPara(toplam)}</span>
+                                        {b.sonOdemeTarihi && <span>Son: {tarihSadeceGunAyYil(b.sonOdemeTarihi)}</span>}
+                                    </div>
+                                    <div style={{ width: '100%', height: '8px', background: '#eee', borderRadius: '4px', marginBottom: '10px' }}><div style={{ width: `${yuzde}%`, height: '100%', background: '#e53e3e', borderRadius: '4px', transition: 'width 0.5s' }}></div></div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <button onClick={() => modalAc('borc_ode', b)} style={{ background: '#e53e3e', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px' }}>Ödeme Yap</button>
+                                        <span onClick={() => modalAc('duzenle_borc', b)} style={{ cursor: 'pointer', marginLeft: '10px' }}>✏️</span>
+                                        <span onClick={() => normalSil("borclar", b.id)} style={{ cursor: 'pointer', marginLeft: '10px' }}>🗑️</span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                }
+                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', fontSize: '13px' }}>
+                    <span style={{ color: '#718096' }}>Toplam Kalan Borç: <b style={{ color: '#e53e3e', fontSize: '16px' }}>{formatPara(toplamKalanBorc)}</b></span>
                 </div>
             </div>
         </div>

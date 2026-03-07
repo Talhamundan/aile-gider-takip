@@ -47,6 +47,7 @@ function App() {
     const [bekleyenFaturalar, setBekleyenFaturalar] = useState([]);
     const [tanimliFaturalar, setTanimliFaturalar] = useState([]);
     const [bildirimler, setBildirimler] = useState([]);
+    const [borclar, setBorclar] = useState([]);
 
     const [gizliMod, setGizliMod] = useState(false);
     const [aktifAy, setAktifAy] = useState(new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }));
@@ -117,6 +118,16 @@ function App() {
     const [kkOdemeKartId, setKkOdemeKartId] = useState("");
     const [kkOdemeKaynakId, setKkOdemeKaynakId] = useState("");
     const [kkOdemeTutar, setKkOdemeTutar] = useState("");
+
+    // Borç Formu
+    const [borcAd, setBorcAd] = useState("");
+    const [borcToplamTutar, setBorcToplamTutar] = useState("");
+    const [borcKalanTutar, setBorcKalanTutar] = useState("");
+    const [borcSonOdemeTarihi, setBorcSonOdemeTarihi] = useState("");
+
+    // Borç Ödeme Formu
+    const [borcOdemeHesapId, setBorcOdemeHesapId] = useState("");
+    const [borcOdemeTutar, setBorcOdemeTutar] = useState("");
 
     // --- OTURUM ---
     useEffect(() => { const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); }); return () => unsubscribe(); }, []);
@@ -212,6 +223,7 @@ function App() {
         const qMaaslar = query(collection(db, "maaslar"), where("aileKodu", "==", aileKodu));
         const qFaturalar = query(collection(db, "bekleyen_faturalar"), where("aileKodu", "==", aileKodu));
         const qFaturaTanim = query(collection(db, "fatura_tanimlari"), where("aileKodu", "==", aileKodu));
+        const qBorclar = query(collection(db, "borclar"), where("aileKodu", "==", aileKodu));
 
         const u1 = onSnapshot(qHesaplar, (s) => setHesaplar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
         const u2 = onSnapshot(qIslemler, (s) => {
@@ -241,6 +253,7 @@ function App() {
         const u6 = onSnapshot(qMaaslar, (s) => setMaaslar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
         const u7 = onSnapshot(qFaturalar, (s) => setBekleyenFaturalar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
         const u8 = onSnapshot(qFaturaTanim, (s) => setTanimliFaturalar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+        const u9 = onSnapshot(qBorclar, (s) => setBorclar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
 
         const ayarGetir = async () => {
             const d = await getDoc(doc(db, "ayarlar", aileKodu));
@@ -270,7 +283,7 @@ function App() {
             }
         }
         ayarGetir();
-        return () => { u1(); u2(); u4(); u5(); u6(); u7(); u8(); }
+        return () => { u1(); u2(); u4(); u5(); u6(); u7(); u8(); u9(); }
     }, [user, aileKodu])
 
     // --- BİLDİRİM MOTORU ---
@@ -416,6 +429,7 @@ function App() {
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF', '#FF1919', '#e15fed', '#82ca9d'];
     let gunlukOrtalama = 0; if (aktifAy !== "Tümü") { const parcalar = aktifAy.split(" "); const ayIsmi = parcalar[0]; const yil = parseInt(parcalar[1]); const aylar = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]; const ayIndex = aylar.indexOf(ayIsmi); if (ayIndex > -1 && !isNaN(yil)) { const simdi = new Date(); let gunSayisi = 1; if (simdi.getMonth() === ayIndex && simdi.getFullYear() === yil) { gunSayisi = Math.max(1, simdi.getDate()); } else { gunSayisi = new Date(yil, ayIndex + 1, 0).getDate(); } gunlukOrtalama = toplamGider / gunSayisi; } }
     const toplamKalanTaksitBorcu = taksitler.reduce((acc, t) => acc + (t.toplamTutar - (t.aylikTutar * t.odenmisTaksit)), 0);
+    const toplamKalanBorc = borclar.reduce((acc, b) => acc + (parseFloat(b.kalanTutar) || 0), 0);
     const toplamAylikTaksitOdemesi = taksitler.reduce((acc, t) => acc + t.aylikTutar, 0);
     const toplamSabitGider = abonelikler.reduce((acc, abo) => acc + abo.tutar, 0);
     const toplamHesapBakiyesi = hesaplar.reduce((acc, h) => { if (aktifAy === "Tümü") { return acc + (parseFloat(h.guncelBakiye) || 0); } else { let aylikFark = 0; filtrelenmisIslemler.forEach(i => { if (i.hesapId === h.id) { if (i.islemTipi === 'gelir') aylikFark += i.tutar; if (i.islemTipi === 'gider') aylikFark -= i.tutar; } if (i.islemTipi === 'transfer') { if (i.kaynakId === h.id) aylikFark -= i.tutar; if (i.hedefId === h.id) aylikFark += i.tutar; } }); return acc + aylikFark; } }, 0);
@@ -425,6 +439,89 @@ function App() {
     const cikisYap = async () => { await signOut(auth); }
 
     const hesapEkle = async (e) => { e.preventDefault(); if (!hesapAdi) return; await addDoc(collection(db, "hesaplar"), { aileKodu, hesapAdi, hesapTipi, guncelBakiye: parseFloat(baslangicBakiye), kesimGunu: hesapTipi === 'krediKarti' ? hesapKesimGunu : "" }); toast.success("Hesap eklendi!"); setHesapAdi(""); setBaslangicBakiye(""); setHesapKesimGunu(""); }
+
+    // --- BORÇ FONKSİYONLARI ---
+    const borcEkle = async (e) => {
+        e.preventDefault();
+        if (!borcAd || !borcToplamTutar) return toast.warning("Borç adı ve toplam tutar zorunludur!");
+        const toplam = parseFloat(borcToplamTutar);
+        // Eğer kalan tutar girilmemişse, varsayılan olarak toplam tutara eşitle.
+        const kalan = borcKalanTutar ? parseFloat(borcKalanTutar) : toplam;
+
+        const yeniData = {
+            aileKodu,
+            ad: borcAd,
+            toplamTutar: toplam,
+            kalanTutar: kalan,
+            eklenmeTarihi: new Date()
+        };
+        if (borcSonOdemeTarihi) yeniData.sonOdemeTarihi = borcSonOdemeTarihi;
+
+        await addDoc(collection(db, "borclar"), yeniData);
+        toast.success("Borç kaydedildi!");
+        setBorcAd(""); setBorcToplamTutar(""); setBorcKalanTutar(""); setBorcSonOdemeTarihi("");
+    }
+
+    const borcDuzenle = async (e) => {
+        e.preventDefault();
+        const toplam = parseFloat(borcToplamTutar);
+        const kalan = borcKalanTutar ? parseFloat(borcKalanTutar) : 0;
+
+        const guncelData = {
+            ad: borcAd,
+            toplamTutar: toplam,
+            kalanTutar: kalan
+        };
+        if (borcSonOdemeTarihi) guncelData.sonOdemeTarihi = borcSonOdemeTarihi;
+        else guncelData.sonOdemeTarihi = null; // opsiyonel alanı temizle
+
+        await updateDoc(doc(db, "borclar", seciliVeri.id), guncelData);
+        toast.success("Borç güncellendi!");
+        setAktifModal(null);
+        setBorcAd(""); setBorcToplamTutar(""); setBorcKalanTutar(""); setBorcSonOdemeTarihi("");
+    }
+
+    const borcOde = async (e) => {
+        e.preventDefault();
+        if (!borcOdemeHesapId || !borcOdemeTutar) return toast.warning("Lütfen hesap seçip ödenecek tutarı girin.");
+
+        const odemeTutari = parseFloat(borcOdemeTutar);
+        if (odemeTutari <= 0) return toast.warning("Geçerli bir tutar girin.");
+
+        const batchObj = writeBatch(db);
+
+        // 1. İlgili borcun kalan tutarını düşür
+        const borcRef = doc(db, "borclar", seciliVeri.id);
+        batchObj.update(borcRef, {
+            kalanTutar: increment(-odemeTutari)
+        });
+
+        // 2. Harcamalar (nakit_islemleri) koleksiyonuna gider kaydı ekle
+        const islemRef = doc(collection(db, "nakit_islemleri"));
+        batchObj.set(islemRef, {
+            aileKodu,
+            hesapId: borcOdemeHesapId,
+            islemTipi: "gider",
+            kategori: "Borç Ödemesi",
+            tutar: odemeTutari,
+            aciklama: `${seciliVeri.ad} Borç Ödemesi`,
+            tarih: new Date(),
+            harcayan: "Sistem",
+            borcId: seciliVeri.id
+        });
+
+        // 3. İlgili hesabın bakiyesinden ödeme tutarını düş
+        const hesapRef = doc(db, "hesaplar", borcOdemeHesapId);
+        batchObj.update(hesapRef, {
+            guncelBakiye: increment(-odemeTutari)
+        });
+
+        await batchObj.commit();
+        toast.success("Borç ödemesi başarıyla işlendi!");
+        setAktifModal(null);
+        setBorcOdemeHesapId("");
+        setBorcOdemeTutar("");
+    }
 
     // SİLME İŞLEMİ (SWEETALERT2 İLE GÜNCELLENDİ)
     const islemSil = async (id) => {
@@ -991,6 +1088,16 @@ function App() {
                 maasEkle={maasEkle}
                 faturaTanimEkle={faturaTanimEkle}
                 abonelikEkle={abonelikEkle}
+                borclar={borclar}
+                borcAd={borcAd} setBorcAd={setBorcAd}
+                borcToplamTutar={borcToplamTutar} setBorcToplamTutar={setBorcToplamTutar}
+                borcKalanTutar={borcKalanTutar} setBorcKalanTutar={setBorcKalanTutar}
+                borcSonOdemeTarihi={borcSonOdemeTarihi} setBorcSonOdemeTarihi={setBorcSonOdemeTarihi}
+                borcOdemeHesapId={borcOdemeHesapId} setBorcOdemeHesapId={setBorcOdemeHesapId}
+                borcOdemeTutar={borcOdemeTutar} setBorcOdemeTutar={setBorcOdemeTutar}
+                borcEkle={borcEkle}
+                borcDuzenle={borcDuzenle}
+                borcOde={borcOde}
             />
 
             <div id="dashboard-top">
@@ -1047,6 +1154,8 @@ function App() {
                     abonelikOde={abonelikOde}
                     toplamSabitGider={toplamSabitGider}
                     tarihSadeceGunAyYil={tarihSadeceGunAyYil}
+                    borclar={borclar}
+                    toplamKalanBorc={toplamKalanBorc}
                 />
 
                 <div id="history-section">
