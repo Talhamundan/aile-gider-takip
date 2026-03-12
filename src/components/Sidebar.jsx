@@ -74,7 +74,7 @@ const Sidebar = ({
             <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>💰 Maaşlar & Düzenli Gelirler</h4>
-                    <button onClick={() => modalAc('yeni_maas')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#48bb78', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                    <button onClick={() => modalAc('yeni_maas')} className="btn-ui btn-ui-success" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
                 </div>
@@ -102,7 +102,7 @@ const Sidebar = ({
             <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>💳 Cüzdanlar & Kartlar</h4>
-                    <button onClick={() => modalAc('yeni_hesap')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#3182ce', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                    <button onClick={() => modalAc('yeni_hesap')} className="btn-ui btn-ui-primary" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
                 </div>
@@ -179,7 +179,7 @@ const Sidebar = ({
             <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>🧾 Faturalar</h4>
-                    <button onClick={() => modalAc('yeni_fatura_tanim')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#718096', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                    <button onClick={() => modalAc('yeni_fatura_tanim')} className="btn-ui btn-ui-neutral" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
                 </div>
@@ -228,7 +228,7 @@ const Sidebar = ({
             <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>🔄 Sabit Giderler</h4>
-                    <button onClick={() => modalAc('yeni_abonelik')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#805ad5', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                    <button onClick={() => modalAc('yeni_abonelik')} className="btn-ui btn-ui-primary" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
                 </div>
@@ -263,8 +263,8 @@ const Sidebar = ({
             <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>💸 Borçlar</h4>
-                    <button onClick={() => modalAc('yeni_borc')} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', background: '#e53e3e', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Borç Tanımla
+                    <button onClick={() => modalAc('yeni_borc')} className="btn-ui btn-ui-danger" style={{ fontSize: '12px' }}>
+                        <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
                 </div>
                 {(!borclar || borclar.length === 0) ? <p style={{ fontSize: '13px', color: '#aaa' }}>Aktif borç bulunmuyor.</p> :
@@ -275,31 +275,54 @@ const Sidebar = ({
                             const yuzde = toplam > 0 ? ((toplam - kalan) / toplam) * 100 : 0;
 
                             return (
-                                <div key={b.id} style={{ padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                        <div style={{ fontWeight: 'bold' }}>{b.ad}</div>
-                                        <span style={{ fontWeight: 'bold' }}>{formatPara(kalan)} <small style={{ color: '#999' }}>Kaldı</small></span>
+                                <div key={b.id} style={{ padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
+
+                                    {/* Üst Kısım: Ad ve Kaldı */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <div style={{ fontWeight: 'bold', color: '#2d3748' }}>{b.ad}</div>
+                                        <div>
+                                            <span style={{ fontWeight: 'bold', color: '#2d3748' }}>{formatPara(kalan)}</span>
+                                            <span style={{ color: '#a0aec0', fontSize: '11px', marginLeft: '4px' }}>Kaldı</span>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', marginBottom: '5px' }}>
+
+                                    {/* Orta Kısım: Ödendi ve Toplam */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#718096', marginBottom: '12px' }}>
+                                        <span>{formatPara(toplam - kalan)} Ödendi</span>
                                         <span>Toplam: {formatPara(toplam)}</span>
-                                        {b.sonOdemeTarihi && <span>Son: {tarihSadeceGunAyYil(b.sonOdemeTarihi)}</span>}
                                     </div>
-                                    <div style={{ width: '100%', height: '8px', background: '#eee', borderRadius: '4px', marginBottom: '10px' }}><div style={{ width: `${yuzde}%`, height: '100%', background: '#e53e3e', borderRadius: '4px', transition: 'width 0.5s' }}></div></div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <button onClick={() => modalAc('borc_ode', b)} style={{ background: '#e53e3e', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '11px' }}>Ödeme Yap</button>
-                                        <span onClick={() => modalAc('duzenle_borc', b)} style={{ cursor: 'pointer', marginLeft: '10px' }}>✏️</span>
-                                        <span onClick={() => normalSil("borclar", b.id)} style={{ cursor: 'pointer', marginLeft: '10px' }}>🗑️</span>
+
+                                    {/* Kalın Gri Çizgi */}
+                                    <div style={{ width: '100%', height: '8px', background: '#edf2f7', borderRadius: '4px', marginBottom: '15px' }}></div>
+
+                                    {/* Alt Kısım: Son Ödeme, Buton ve İkonlar */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        {/* Son Ödeme */}
+                                        <div style={{ fontSize: '11px', color: '#e53e3e' }}>
+                                            {b.sonOdemeTarihi ? `Son Ödeme: ${tarihSadeceGunAyYil(b.sonOdemeTarihi)}` : ''}
+                                        </div>
+
+                                        {/* Buton ve Aksiyonlar */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <button
+                                                onClick={() => modalAc('borc_ode', b)}
+                                                style={{ background: '#ef4444', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>
+                                                Öde
+                                            </button>
+                                            <span onClick={() => modalAc('duzenle_borc', b)} style={{ cursor: 'pointer', fontSize: '12px' }}>✏️</span>
+                                            <span onClick={() => normalSil("borclar", b.id)} style={{ cursor: 'pointer', fontSize: '12px' }}>🗑️</span>
+                                        </div>
                                     </div>
                                 </div>
                             )
                         })}
                     </div>
                 }
-                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', fontSize: '13px' }}>
-                    <span style={{ color: '#718096' }}>Toplam Kalan Borç: <b style={{ color: '#e53e3e', fontSize: '16px' }}>{formatPara(toplamKalanBorc)}</b></span>
+                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', textAlign: 'right', fontSize: '13px' }}>
+                    <span style={{ color: '#718096' }}>Toplam Kalan Borç: <b style={{ color: '#e53e3e' }}>{formatPara(toplamKalanBorc)}</b></span>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

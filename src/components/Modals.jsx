@@ -51,12 +51,12 @@ const KrediKartiBorcOdeModal = ({
     return (
         <form onSubmit={krediKartiBorcOde}>
             <div style={headerStyle}>
-                <h3 style={{ ...titleStyle, fontFamily: "'Georgia', 'Times New Roman', serif" }}>💳 Kredi Kartı Borcu Öde</h3>
+                <h3 style={titleStyle}>💳 Kredi Kartı Borcu Öde</h3>
                 <CloseButton />
             </div>
 
             {/* Borç Bilgi Kutusu */}
-            <div style={{ marginBottom: '20px', padding: '15px', background: '#f3e8ff', borderRadius: '12px', fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+            <div style={{ marginBottom: '20px', padding: '15px', background: '#f3e8ff', borderRadius: '12px' }}>
                 <p style={{ margin: 0, fontSize: '15px' }}>
                     <span style={{ fontWeight: 'bold' }}>Kart:</span> {kart?.hesapAdi}
                 </p>
@@ -70,7 +70,7 @@ const KrediKartiBorcOdeModal = ({
 
             {/* Ödeme Seçenekleri (Radio Buttons) */}
             <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#4a5568', fontFamily: "'Georgia', 'Times New Roman', serif" }}>Ödenecek Tutar Seçimi:</label>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold', color: '#4a5568' }}>Ödenecek Tutar Seçimi:</label>
                 <div style={radioContainerStyle}>
                     <label style={radioLabelStyle}>
                         <input
@@ -81,7 +81,7 @@ const KrediKartiBorcOdeModal = ({
                             onChange={() => setOdemeSecenegi('tamami')}
                             style={{ accentColor: '#805ad5' }}
                         />
-                        <span style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                        <span>
                             Tamamı ({formatPara(guncelBorc)})
                         </span>
                     </label>
@@ -95,7 +95,7 @@ const KrediKartiBorcOdeModal = ({
                             onChange={() => setOdemeSecenegi('asgari')}
                             style={{ accentColor: '#805ad5' }}
                         />
-                        <span style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                        <span>
                             Asgari (%20) - {formatPara(asgariBorc)}
                         </span>
                     </label>
@@ -109,7 +109,7 @@ const KrediKartiBorcOdeModal = ({
                             onChange={() => setOdemeSecenegi('ozel')}
                             style={{ accentColor: '#805ad5' }}
                         />
-                        <span style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+                        <span>
                             Özel Tutar
                         </span>
                     </label>
@@ -120,7 +120,7 @@ const KrediKartiBorcOdeModal = ({
             <select
                 value={kkOdemeKaynakId}
                 onChange={e => setKkOdemeKaynakId(e.target.value)}
-                style={{ ...inputStyle, fontFamily: "'Georgia', 'Times New Roman', serif" }}
+                style={inputStyle}
                 required
             >
                 <option value="">Parayı Hangi Hesaptan Çekelim?</option>
@@ -137,7 +137,6 @@ const KrediKartiBorcOdeModal = ({
                 onChange={e => setKkOdemeTutar(e.target.value)}
                 style={{
                     ...inputStyle,
-                    fontFamily: "'Georgia', 'Times New Roman', serif",
                     backgroundColor: odemeSecenegi !== 'ozel' ? '#e2e8f0' : '#f7fafc',
                     cursor: odemeSecenegi !== 'ozel' ? 'not-allowed' : 'text'
                 }}
@@ -147,13 +146,7 @@ const KrediKartiBorcOdeModal = ({
 
             <button
                 type="submit"
-                style={{
-                    ...getButtonStyle('#805ad5'),
-                    fontFamily: "'Georgia', 'Times New Roman', serif",
-                    letterSpacing: '1px',
-                    borderRadius: '25px', // Daha yuvarlak buton
-                    padding: '14px'
-                }}
+                className="modal-primary-btn"
             >
                 ÖDEMEYİ YAP
             </button>
@@ -238,6 +231,7 @@ const Modals = ({
     borcToplamTutar, setBorcToplamTutar,
     borcKalanTutar, setBorcKalanTutar,
     borcSonOdemeTarihi, setBorcSonOdemeTarihi,
+    borcKategori, setBorcKategori,
     borcOdemeHesapId, setBorcOdemeHesapId,
     borcOdemeTutar, setBorcOdemeTutar,
     borcEkle,
@@ -275,21 +269,70 @@ const Modals = ({
         setDeleteModal({ show: false, type: null, item: null });
     };
 
+    useEffect(() => {
+        if (aktifModal === 'borc_ode') {
+            setBorcOdemeHesapId("");
+            setBorcOdemeTutar("");
+        }
+    }, [aktifModal, setBorcOdemeHesapId, setBorcOdemeTutar]);
 
     if (!aktifModal) return null;
 
     // Ortak Stiller
     const isSettings = aktifModal === 'ayarlar_yonetim';
-    const modalContainerStyle = { background: 'white', padding: isSettings ? '20px' : '30px', borderRadius: '20px', width: '90%', maxWidth: isSettings ? '380px' : '400px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', maxHeight: '90vh', overflowY: 'auto', fontFamily: "'Georgia', 'Times New Roman', serif" };
-    const inputStyle = { width: '100%', padding: '12px 15px', borderRadius: '12px', border: '1px solid #edf2f7', backgroundColor: '#f7fafc', marginBottom: '15px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
+    const modalContainerStyle = {
+        background: 'var(--surface-solid, #ffffff)',
+        padding: isSettings ? '20px' : '30px',
+        borderRadius: '18px',
+        width: '90%',
+        maxWidth: isSettings ? '380px' : '420px',
+        boxShadow: '0 24px 60px rgba(15, 23, 42, 0.30)',
+        border: '1px solid rgba(148, 163, 184, 0.18)',
+        maxHeight: '90vh',
+        overflowY: 'auto'
+    };
+    const inputStyle = {
+        width: '100%',
+        padding: '11px 14px',
+        borderRadius: 'var(--radius-input, 12px)',
+        border: '1px solid var(--border, rgba(15, 23, 42, 0.12))',
+        backgroundColor: 'var(--surface-solid, #fff)',
+        marginBottom: '15px',
+        fontSize: '14px',
+        outline: 'none',
+        boxSizing: 'border-box'
+    };
     const labelStyle = { display: 'block', marginBottom: '5px', fontSize: '13px', color: '#718096', fontWeight: 'bold' };
-    const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' };
-    const titleStyle = { margin: 0, color: '#2d3748', fontWeight: 'bold', fontSize: '1.25rem' };
+    const headerStyle = {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+        borderBottom: '1px solid #e2e8f0',
+        paddingBottom: '10px'
+    };
+    const titleStyle = {
+        margin: 0,
+        color: '#0f172a',
+        fontWeight: 700,
+        fontSize: '1.05rem',
+        letterSpacing: '0.1px'
+    };
     const closeButtonStyle = { cursor: 'pointer', color: '#a0aec0', fontSize: '20px', lineHeight: '1' };
 
     // Buton stilleri fonksiyonu (renk parametresi ile)
     const getButtonStyle = (bgColor) => ({
-        width: '100%', padding: '12px', borderRadius: '12px', fontWeight: '600', fontSize: '15px', marginTop: '10px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', border: 'none', background: bgColor, color: 'white'
+        width: '100%',
+        padding: '12px',
+        borderRadius: '12px',
+        fontWeight: '600',
+        fontSize: '15px',
+        marginTop: '10px',
+        cursor: 'pointer',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+        border: 'none',
+        background: bgColor,
+        color: 'white'
     });
 
     const CloseButton = () => (
@@ -297,7 +340,19 @@ const Modals = ({
     );
 
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999 }}>
+        <div style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            background: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 999
+        }}>
             <div style={modalContainerStyle}>
 
                 {/* --- YENİ EKLEME MODALLARI --- */}
@@ -315,7 +370,7 @@ const Modals = ({
                     </select>
                     <input placeholder="Başlangıç Bakiyesi" type="number" value={baslangicBakiye} onChange={e => setBaslangicBakiye(e.target.value)} style={inputStyle} />
                     {hesapTipi === 'krediKarti' && <input placeholder="Kesim Günü (1-31)" type="number" value={hesapKesimGunu} onChange={e => setHesapKesimGunu(e.target.value)} style={inputStyle} />}
-                    <button type="submit" style={getButtonStyle('#3182ce')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {/* YENİ MAAŞ EKLE */}
@@ -331,7 +386,7 @@ const Modals = ({
                         <option value="">Hangi Hesaba Yatsın?</option>
                         {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}
                     </select>
-                    <button type="submit" style={getButtonStyle('#48bb78')}>Kaydet</button>
+                    <button type="submit" className="modal-success-btn">Kaydet</button>
                 </form>}
 
                 {/* YENİ FATURA TANIMI EKLE */}
@@ -343,7 +398,7 @@ const Modals = ({
                     <input placeholder="Başlık (Örn: Ev Elektrik)" value={tanimBaslik} onChange={e => setTanimBaslik(e.target.value)} style={inputStyle} required />
                     <input placeholder="Kurum Adı" value={tanimKurum} onChange={e => setTanimKurum(e.target.value)} style={inputStyle} />
                     <input placeholder="Abone No" value={tanimAboneNo} onChange={e => setTanimAboneNo(e.target.value)} style={inputStyle} />
-                    <button type="submit" style={getButtonStyle('#718096')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {/* YENİ ABONELİK EKLE */}
@@ -365,7 +420,7 @@ const Modals = ({
                         <option value="">Hangi Hesaptan Çekilsin?</option>
                         {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}
                     </select>
-                    <button type="submit" style={getButtonStyle('#805ad5')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {/* YENİ BORÇ EKLE */}
@@ -377,9 +432,13 @@ const Modals = ({
                     <input placeholder="Borç Adı (Örn: Ahmet'ten Borç)" value={borcAd} onChange={e => setBorcAd(e.target.value)} style={inputStyle} required />
                     <input placeholder="Toplam Borç Tutarı" type="number" step="0.01" value={borcToplamTutar} onChange={e => setBorcToplamTutar(e.target.value)} style={inputStyle} required />
                     <input placeholder="Kalan Tutar (Boşsa Toplam ile aynı olur)" type="number" step="0.01" value={borcKalanTutar} onChange={e => setBorcKalanTutar(e.target.value)} style={inputStyle} />
+                    <label style={labelStyle}>Kategori</label>
+                    <select value={borcKategori} onChange={e => setBorcKategori(e.target.value)} style={inputStyle}>
+                        {kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
                     <label style={labelStyle}>Son Ödeme Tarihi (Opsiyonel)</label>
                     <input type="date" value={borcSonOdemeTarihi} onChange={e => setBorcSonOdemeTarihi(e.target.value)} style={inputStyle} />
-                    <button type="submit" style={getButtonStyle('#e53e3e')}>Kaydet</button>
+                    <button type="submit" className="modal-danger-btn">Kaydet</button>
                 </form>}
 
 
@@ -389,7 +448,7 @@ const Modals = ({
                     <input value={hesapAdi} onChange={e => setHesapAdi(e.target.value)} style={inputStyle} />
                     <input type="number" value={baslangicBakiye} onChange={e => setBaslangicBakiye(e.target.value)} style={inputStyle} />
                     {seciliVeri.hesapTipi === 'krediKarti' && <input type="number" placeholder="Kesim Günü (1-31)" value={hesapKesimGunu} onChange={e => setHesapKesimGunu(e.target.value)} style={inputStyle} />}
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'duzenle_islem' && <form onSubmit={islemDuzenle}>
@@ -399,7 +458,7 @@ const Modals = ({
                     <input type="datetime-local" value={islemTarihi} onChange={e => setIslemTarihi(e.target.value)} max="9999-12-31T23:59" style={inputStyle} />
                     <select value={harcayanKisi} onChange={e => setHarcayanKisi(e.target.value)} style={inputStyle}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
                     <select value={kategori} onChange={e => setKategori(e.target.value)} style={inputStyle}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'duzenle_abonelik' && <form onSubmit={abonelikDuzenle}>
@@ -410,7 +469,7 @@ const Modals = ({
                     <select value={aboKategori} onChange={e => setAboKategori(e.target.value)} style={inputStyle}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
                     <select value={aboKisi} onChange={e => setAboKisi(e.target.value)} style={inputStyle}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
                     <select value={aboHesapId} onChange={e => setAboHesapId(e.target.value)} style={inputStyle}><option value="">Hangi Hesaptan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'duzenle_taksit' && <form onSubmit={taksitDuzenle}>
@@ -424,7 +483,7 @@ const Modals = ({
                     <label style={labelStyle}>Alış Tarihi:</label>
                     <input type="date" value={taksitAlisTarihi} onChange={e => setTaksitAlisTarihi(e.target.value)} max="9999-12-31" style={inputStyle} />
                     <div style={{ marginBottom: '15px', fontSize: '13px', color: 'blue' }}>Yeni Aylık Tutar: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0 ₺'}</div>
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'duzenle_maas' && <form onSubmit={maasDuzenle}>
@@ -433,7 +492,7 @@ const Modals = ({
                     <input type="number" value={maasTutar} onChange={e => setMaasTutar(e.target.value)} placeholder="Tutar" style={inputStyle} />
                     <input type="number" value={maasGun} onChange={e => setMaasGun(e.target.value)} placeholder="Yatma Günü (1-31)" style={inputStyle} />
                     <select value={maasHesapId} onChange={e => setMaasHesapId(e.target.value)} style={inputStyle}><option value="">Hangi Hesaba?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'duzenle_fatura_tanim' && <form onSubmit={faturaTanimDuzenle}>
@@ -441,7 +500,7 @@ const Modals = ({
                     <input value={tanimBaslik} onChange={e => setTanimBaslik(e.target.value)} placeholder="Başlık" style={inputStyle} />
                     <input value={tanimKurum} onChange={e => setTanimKurum(e.target.value)} placeholder="Kurum" style={inputStyle} />
                     <input value={tanimAboneNo} onChange={e => setTanimAboneNo(e.target.value)} placeholder="Abone No" style={inputStyle} />
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {/* BORÇ DÜZENLE */}
@@ -450,9 +509,13 @@ const Modals = ({
                     <input value={borcAd} onChange={e => setBorcAd(e.target.value)} placeholder="Borç Adı" style={inputStyle} required />
                     <input type="number" step="0.01" value={borcToplamTutar} onChange={e => setBorcToplamTutar(e.target.value)} placeholder="Toplam Borç Tutarı" style={inputStyle} required />
                     <input type="number" step="0.01" value={borcKalanTutar} onChange={e => setBorcKalanTutar(e.target.value)} placeholder="Kalan Tutar" style={inputStyle} />
+                    <label style={labelStyle}>Kategori</label>
+                    <select value={borcKategori} onChange={e => setBorcKategori(e.target.value)} style={inputStyle}>
+                        {kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
                     <label style={labelStyle}>Son Ödeme Tarihi (Opsiyonel)</label>
                     <input type="date" value={borcSonOdemeTarihi} onChange={e => setBorcSonOdemeTarihi(e.target.value)} style={inputStyle} />
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'kredi_karti_ode' && <KrediKartiBorcOdeModal
@@ -473,38 +536,50 @@ const Modals = ({
 
                 {/* BORÇ ÖDEME MODALI */}
                 {aktifModal === 'borc_ode' && <form onSubmit={borcOde}>
-                    <div style={headerStyle}><h3 style={titleStyle}>💸 Borç Öde</h3><CloseButton /></div>
+                    <div style={{ ...headerStyle, borderBottom: 'none', paddingBottom: '10px' }}>
+                        <h3 style={{ ...titleStyle, fontSize: '20px', color: '#1f2937' }}>💳 Borç Öde</h3>
+                        <CloseButton />
+                    </div>
                     {(() => {
                         const ad = seciliVeri ? seciliVeri.ad : "Borç";
                         const kalan = seciliVeri ? parseFloat(seciliVeri.kalanTutar) : 0;
                         return (
-                            <div style={{ marginBottom: '15px' }}>
-                                <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 5px 0' }}>{ad}</p>
-                                <p style={{ color: '#e53e3e', fontSize: '16px', margin: 0 }}>Kalan Borç: <b>{formatPara(kalan)}</b></p>
+                            <div style={{ background: '#fdf2f8', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
+                                <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#831843', margin: '0 0 8px 0' }}>{ad}</p>
+                                <p style={{ color: '#9d174d', fontSize: '15px', margin: 0 }}>Kalan Borç: <b>{formatPara(kalan)}</b></p>
                             </div>
                         )
                     })()}
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Kaç TL ödeyeceksin?"
+                        value={borcOdemeTutar}
+                        onChange={e => setBorcOdemeTutar(e.target.value)}
+                        style={{ ...inputStyle, padding: '12px', fontSize: '15px', borderRadius: '8px', border: '1px solid #c4b5fd' }}
+                        required
+                    />
+
                     <select
                         value={borcOdemeHesapId}
                         onChange={e => setBorcOdemeHesapId(e.target.value)}
-                        style={inputStyle}
+                        style={{ ...inputStyle, padding: '12px', fontSize: '15px', borderRadius: '8px' }}
                         required
                     >
-                        <option value="">Hangi Hesaptan Ödenecek?</option>
+                        <option value="">Ödeme Aracı (Hangi Hesaptan?)</option>
                         {hesaplar.map(h => (
                             <option key={h.id} value={h.id}>{h.hesapAdi} ({formatPara(h.guncelBakiye)})</option>
                         ))}
                     </select>
-                    <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Ödenecek Tutar"
-                        value={borcOdemeTutar}
-                        onChange={e => setBorcOdemeTutar(e.target.value)}
-                        style={inputStyle}
-                        required
-                    />
-                    <button type="submit" style={getButtonStyle('#e53e3e')}>Ödemeyi Yap</button>
+
+                    <button
+                        type="submit"
+                        className="modal-primary-btn"
+                        style={{ marginTop: '10px' }}
+                    >
+                        ÖDEMEYİ YAP
+                    </button>
                 </form>}
 
                 {/* FATURA ÖDEME MODALI */}
@@ -537,7 +612,7 @@ const Modals = ({
                     <input type="number" value={faturaGirisTutar} onChange={e => setFaturaGirisTutar(e.target.value)} placeholder="Tutar" style={inputStyle} />
                     <input type="date" value={faturaGirisTarih} onChange={e => setFaturaGirisTarih(e.target.value)} max="9999-12-31" style={inputStyle} />
                     <input value={faturaGirisAciklama} onChange={e => setFaturaGirisAciklama(e.target.value)} placeholder="Açıklama" style={inputStyle} />
-                    <button type="submit" style={getButtonStyle('blue')}>Kaydet</button>
+                    <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
                 {aktifModal === 'ayarlar_yonetim' && <div>
@@ -550,7 +625,7 @@ const Modals = ({
                     </ul>
                     <form onSubmit={(e) => { e.preventDefault(); if (!yeniKisiAdi) return; const y = [...aileUyeleri, yeniKisiAdi]; setAileUyeleri(y); setDoc(doc(db, "ayarlar", aileKodu), { aileUyeleri: y }, { merge: true }); setYeniKisiAdi(""); toast.success("Kişi eklendi"); }} style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
                         <input value={yeniKisiAdi} onChange={e => setYeniKisiAdi(e.target.value)} placeholder="Yeni Kişi Adı" style={{ ...inputStyle, padding: '8px', fontSize: '13px', marginBottom: '10px' }} />
-                        <button type="submit" style={{ ...getButtonStyle('4299e1'), width: 'auto', padding: '8px 12px', marginTop: 0, marginBottom: '10px', fontSize: '13px' }}>Ekle</button>
+                        <button type="submit" className="btn-ui btn-ui-primary" style={{ padding: '8px 12px', marginTop: 0, marginBottom: '10px', fontSize: '13px' }}>Ekle</button>
                     </form>
 
                     <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '15px 0' }} />
@@ -560,7 +635,7 @@ const Modals = ({
                     </ul>
                     <form onSubmit={(e) => { e.preventDefault(); if (!yeniKategoriAdi) return; const y = [...kategoriListesi, yeniKategoriAdi]; setKategoriListesi(y); setDoc(doc(db, "ayarlar", aileKodu), { kategoriler: y }, { merge: true }); setYeniKategoriAdi(""); toast.success("Kategori eklendi"); }} style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
                         <input value={yeniKategoriAdi} onChange={e => setYeniKategoriAdi(e.target.value)} placeholder="Yeni Kategori" style={{ ...inputStyle, padding: '8px', fontSize: '13px', marginBottom: '10px' }} />
-                        <button type="submit" style={{ ...getButtonStyle('green'), width: 'auto', padding: '8px 12px', marginTop: 0, marginBottom: '10px', fontSize: '13px' }}>Ekle</button>
+                        <button type="submit" className="btn-ui btn-ui-success" style={{ padding: '8px 12px', marginTop: 0, marginBottom: '10px', fontSize: '13px' }}>Ekle</button>
                     </form>
 
                     <div style={{ marginTop: '20px', padding: '15px', background: '#fffaf0', border: '1px solid #fbd38d', borderRadius: '12px' }}>
@@ -568,7 +643,7 @@ const Modals = ({
                         <p style={{ fontSize: '12px', color: '#7b341e', marginBottom: '10px' }}>Kodunuz: <b>{aileKodu}</b>. Taşımak için yeni kodu girin.</p>
                         <form onSubmit={verileriTasi} style={{ display: 'flex', gap: '5px' }}>
                             <input value={yeniAileKoduInput} onChange={e => setYeniAileKoduInput(e.target.value.toUpperCase())} placeholder="YENİ KOD" style={{ ...inputStyle, border: '1px solid #fbd38d', padding: '8px', marginBottom: 0, fontSize: '13px' }} />
-                            <button type="submit" disabled={tasimaIslemiSuruyor} style={{ ...getButtonStyle('#c05621'), width: 'auto', padding: '8px 12px', marginTop: 0, fontSize: '13px' }}>{tasimaIslemiSuruyor ? '...' : 'TAŞI'}</button>
+                            <button type="submit" disabled={tasimaIslemiSuruyor} className="btn-ui btn-ui-danger" style={{ padding: '8px 12px', marginTop: 0, fontSize: '13px' }}>{tasimaIslemiSuruyor ? '...' : 'TAŞI'}</button>
                         </form>
                     </div>
                 </div>}
@@ -588,15 +663,15 @@ const Modals = ({
                     zIndex: 1001 // Ayarlar modalının üstünde
                 }}>
                     <div style={{
-                        background: 'white',
+                        background: 'var(--surface-solid, #ffffff)',
                         padding: '30px',
-                        borderRadius: '20px',
+                        borderRadius: '18px',
                         width: '90%',
                         maxWidth: '350px',
                         textAlign: 'center',
-                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                        animation: 'fadeIn 0.2s ease-out',
-                        fontFamily: "'Georgia', 'Times New Roman', serif"
+                        boxShadow: '0 24px 60px rgba(15, 23, 42, 0.30)',
+                        border: '1px solid rgba(148, 163, 184, 0.18)',
+                        animation: 'fadeIn 0.2s ease-out'
                     }}>
                         <div style={{
                             width: '50px',

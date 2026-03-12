@@ -1,50 +1,372 @@
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-        sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+/* --- GLOBAL THEME (LIGHT, PREMIUM) --- */
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: #0f172a;
+  background-color: #0b1120;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Design tokens */
+  --bg-app: #f7f9fc;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-solid: #ffffff;
+  --border: rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --radius-card: 18px;
+  --radius-input: 12px;
+  --text: #0f172a;
+  --text-muted: rgba(15, 23, 42, 0.62);
+  --text-faint: rgba(15, 23, 42, 0.45);
+  --accent: #4f46e5;
+  --accent-2: #7c3aed;
 }
 
-code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-        monospace;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, #1d2433 0, transparent 55%),
+    radial-gradient(circle at bottom right, #020617 0, transparent 55%),
+    #020617;
+  color: var(--text);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+a {
+  font-weight: 500;
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #4338ca;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Segoe UI", sans-serif;
+}
+
+button {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    transform 0.05s ease;
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* --- Taksit Form Responsive Grid --- */
+/* --- UI UTILITIES --- */
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+.text-faint {
+  color: var(--text-faint) !important;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--text);
+}
+
+.card-title-sm {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kpi-amount {
+  margin: 10px 0 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--text);
+}
+
+.kpi-amount-sm {
+  margin: 8px 0 0 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.btn-ui {
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+}
+
+.btn-ui-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.18);
+}
+
+.btn-ui-neutral {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: var(--border);
+  color: rgba(15, 23, 42, 0.75);
+}
+
+.btn-ui-success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.18);
+}
+
+.btn-ui-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.18);
+}
+
+/* --- MODAL BUTTONS --- */
+.modal-primary-btn {
+  width: 100%;
+  border-radius: 12px;
+  padding: 11px 14px !important;
+  border: none !important;
+  background: linear-gradient(
+      135deg,
+      var(--accent) 0%,
+      var(--accent-2) 100%
+    ) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.18);
+}
+
+.modal-success-btn {
+  width: 100%;
+  border-radius: 12px;
+  padding: 11px 14px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.18);
+}
+
+.modal-danger-btn {
+  width: 100%;
+  border-radius: 12px;
+  padding: 11px 14px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.18);
+}
+
+/* --- PREMIUM FORM BUTTONS (solid colors for Budget tabs) --- */
+.modal-orange-btn,
+.modal-blue-btn,
+.modal-purple-btn,
+.modal-red-btn {
+  width: 100%;
+  border-radius: 12px;
+  padding: 11px 14px !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.25px;
+  box-shadow: var(--shadow-md);
+}
+
+.modal-orange-btn {
+  background: #ed8936 !important;
+  box-shadow: 0 10px 25px rgba(237, 137, 54, 0.22);
+}
+
+.modal-blue-btn {
+  background: #3182ce !important;
+  box-shadow: 0 10px 25px rgba(49, 130, 206, 0.20);
+}
+
+.modal-purple-btn {
+  background: #805ad5 !important;
+  box-shadow: 0 10px 25px rgba(128, 90, 213, 0.20);
+}
+
+.modal-red-btn {
+  background: #c53030 !important;
+  box-shadow: 0 10px 25px rgba(197, 48, 48, 0.22);
+}
+
+/* Remove outline for all focused elements */
+button:focus,
+.btn:focus,
+input:focus,
+textarea:focus,
+select:focus,
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.btn-check:focus + .btn,
+.btn:focus {
+  box-shadow: none !important;
+}
+
+/* Forced white theme for inputs */
+input,
+select,
+textarea,
+option {
+  background-color: #ffffff !important;
+  color: #1a202c !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: #805ad5 !important;
+  box-shadow: 0 0 0 3px rgba(128, 90, 213, 0.1) !important;
+}
+
+::placeholder {
+  color: #a0aec0 !important;
+  opacity: 1 !important;
+}
+
+/* Hide scrollbar helpers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* --- Taksit Form Responsive Grid (project-specific) --- */
 .taksit-form-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-    background: #f3e8ff;
-    padding: 20px;
-    border-radius: 10px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  background: #f3e8ff;
+  padding: 20px;
+  border-radius: 10px;
 }
 
 .span-full {
-    grid-column: 1 / -1;
-    /* Tüm genişliği kapla */
+  grid-column: 1 / -1;
 }
 
 @media (min-width: 768px) {
-    .taksit-form-grid {
-        grid-template-columns: 1fr 1fr;
-    }
+  .taksit-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 
-    .span-full {
-        grid-column: span 2;
-    }
+  .span-full {
+    grid-column: span 2;
+  }
+}
+
+/* --- Budget responsive helpers (for Dashboard-style cards) --- */
+@media (max-width: 767px) {
+  .responsive-grid-3,
+  .responsive-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .responsive-card {
+    border-radius: 24px !important;
+    padding: 20px !important;
+  }
+
+  .responsive-title {
+    font-size: 11px !important;
+  }
+
+  .responsive-amount {
+    font-size: 22px !important;
+    word-break: break-word;
+  }
+}
+
+@media (min-width: 768px) {
+  .show-on-mobile {
+    display: none !important;
+  }
+
+  .responsive-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .responsive-grid-2 {
+    display: grid;
+    grid-template-columns: 1.1fr 1.9fr;
+    gap: 24px;
+  }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { cardStyle, inputStyle } from '../utils/helpers';
 
 
 const TransactionArea = ({
@@ -58,13 +59,69 @@ const TransactionArea = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
             {/* 1. KART: VERİ GİRİŞ FORMLARI */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+            <div style={cardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button onClick={() => setFormTab("islem")} style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: '11px', fontWeight: 'bold', padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "islem" ? '#ed8936' : '#edf2f7', color: formTab === "islem" ? 'white' : '#4a5568' }}>Gelir / Gider</button>
-                        <button onClick={() => setFormTab("transfer")} style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: '11px', fontWeight: 'bold', padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "transfer" ? '#3182ce' : '#edf2f7', color: formTab === "transfer" ? 'white' : '#4a5568' }}>Transfer</button>
-                        <button onClick={() => setFormTab("taksit")} style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: '11px', fontWeight: 'bold', padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "taksit" ? '#805ad5' : '#edf2f7', color: formTab === "taksit" ? 'white' : '#4a5568' }}>Taksit</button>
-                        <button onClick={() => setFormTab("fatura")} style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontSize: '11px', fontWeight: 'bold', padding: '8px 20px', borderRadius: '20px', border: 'none', cursor: 'pointer', background: formTab === "fatura" ? '#c53030' : '#edf2f7', color: formTab === "fatura" ? 'white' : '#4a5568' }}>Fatura Gir</button>
+                        <button
+                            onClick={() => setFormTab("islem")}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '999px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: formTab === "islem" ? '#ed8936' : '#edf2f7',
+                                color: formTab === "islem" ? '#ffffff' : '#4a5568',
+                                fontWeight: 600,
+                                fontSize: '11px'
+                            }}
+                        >
+                            Gelir / Gider
+                        </button>
+                        <button
+                            onClick={() => setFormTab("transfer")}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '999px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: formTab === "transfer" ? '#3182ce' : '#edf2f7',
+                                color: formTab === "transfer" ? '#ffffff' : '#4a5568',
+                                fontWeight: 600,
+                                fontSize: '11px'
+                            }}
+                        >
+                            Transfer
+                        </button>
+                        <button
+                            onClick={() => setFormTab("taksit")}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '999px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: formTab === "taksit" ? '#805ad5' : '#edf2f7',
+                                color: formTab === "taksit" ? '#ffffff' : '#4a5568',
+                                fontWeight: 600,
+                                fontSize: '11px'
+                            }}
+                        >
+                            Taksit
+                        </button>
+                        <button
+                            onClick={() => setFormTab("fatura")}
+                            style={{
+                                padding: '6px 12px',
+                                borderRadius: '999px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: formTab === "fatura" ? '#c53030' : '#edf2f7',
+                                color: formTab === "fatura" ? '#ffffff' : '#4a5568',
+                                fontWeight: 600,
+                                fontSize: '11px'
+                            }}
+                        >
+                            Fatura Gir
+                        </button>
                     </div>
                 </div>
 
@@ -72,38 +129,136 @@ const TransactionArea = ({
                 {formTab === "islem" && (
                     <form onSubmit={islemEkle} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <select value={secilenHesapId} onChange={e => setSecilenHesapId(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0', backgroundColor: '#f7fafc' }}><option value="">Hangi Hesaptan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}</select>
-                            <select value={islemTipi} onChange={e => setIslemTipi(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}><option value="gider">🔴 Gider</option><option value="gelir">🟢 Gelir</option></select>
+                            <select
+                                value={secilenHesapId}
+                                onChange={e => setSecilenHesapId(e.target.value)}
+                                style={{ flex: 1, ...inputStyle, backgroundColor: '#f7fafc' }}
+                            >
+                                <option value="">Hangi Hesaptan?</option>
+                                {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}
+                            </select>
+                            <select
+                                value={islemTipi}
+                                onChange={e => setIslemTipi(e.target.value)}
+                                style={{ flex: 1, ...inputStyle }}
+                            >
+                                <option value="gider">🔴 Gider</option>
+                                <option value="gelir">🟢 Gelir</option>
+                            </select>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <select value={harcayanKisi || aileUyeleri[0]} onChange={e => { const val = e.target.value; setHarcayanKisi(val); if (val === "Araç Giderleri") setKategori("Araç"); }} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
-                            <select value={kategori || kategoriListesi[0]} onChange={e => setKategori(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
+                            <select
+                                value={harcayanKisi || aileUyeleri[0]}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setHarcayanKisi(val);
+                                    if (val === "Araç Giderleri") setKategori("Araç");
+                                }}
+                                style={{ flex: 1, ...inputStyle }}
+                            >
+                                {aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}
+                            </select>
+                            <select
+                                value={kategori || kategoriListesi[0]}
+                                onChange={e => setKategori(e.target.value)}
+                                style={{ flex: 1, ...inputStyle }}
+                            >
+                                {kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}
+                            </select>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <input placeholder="Açıklama" value={islemAciklama} onChange={e => setIslemAciklama(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
-                            <input type="number" placeholder="Tutar (₺)" value={islemTutar} onChange={e => setIslemTutar(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
+                            <input
+                                placeholder="Açıklama"
+                                value={islemAciklama}
+                                onChange={e => setIslemAciklama(e.target.value)}
+                                style={{ flex: 1, ...inputStyle }}
+                            />
+                            <input
+                                type="number"
+                                placeholder="Tutar (₺)"
+                                value={islemTutar}
+                                onChange={e => setIslemTutar(e.target.value)}
+                                style={{ flex: 1, ...inputStyle }}
+                            />
                         </div>
-                        <input type="datetime-local" value={islemTarihi} onChange={e => setIslemTarihi(e.target.value)} max="9999-12-31T23:59" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
-                        <button type="submit" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", padding: '15px', background: '#ed8936', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
+                        <input
+                            type="datetime-local"
+                            value={islemTarihi}
+                            onChange={e => setIslemTarihi(e.target.value)}
+                            max="9999-12-31T23:59"
+                            style={{ ...inputStyle }}
+                        />
+                        <button
+                            type="submit"
+                            className="modal-orange-btn"
+                            style={{ marginTop: '8px' }}
+                        >
+                            KAYDET
+                        </button>
                     </form>
                 )}
 
                 {/* TRANSFER FORMU */}
                 {formTab === "transfer" && (
                     <form onSubmit={transferYap} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: '#ebf8ff', padding: '20px', borderRadius: '10px' }}>
-                        <div><label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereden?</label><select value={transferKaynakId} onChange={e => setTransferKaynakId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}><option value="">Seçiniz...</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}</select></div>
-                        <div><label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereye?</label><select value={transferHedefId} onChange={e => setTransferHedefId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }}><option value="">Seçiniz...</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}</select></div>
+                        <div>
+                            <label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereden?</label>
+                            <select
+                                value={transferKaynakId}
+                                onChange={e => setTransferKaynakId(e.target.value)}
+                                style={{ ...inputStyle }}
+                            >
+                                <option value="">Seçiniz...</option>
+                                {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereye?</label>
+                            <select
+                                value={transferHedefId}
+                                onChange={e => setTransferHedefId(e.target.value)}
+                                style={{ ...inputStyle }}
+                            >
+                                <option value="">Seçiniz...</option>
+                                {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({h.guncelBakiye}₺)</option>)}
+                            </select>
+                        </div>
 
                         <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
-                            <input type="number" placeholder="İşlem Tutarı (₺)" value={transferTutar} onChange={e => setTransferTutar(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} required />
-                            <input type="number" placeholder="Ücret (Opsiyonel)" value={transferUcreti} onChange={e => setTransferUcreti(e.target.value)} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
+                            <input
+                                type="number"
+                                placeholder="İşlem Tutarı (₺)"
+                                value={transferTutar}
+                                onChange={e => setTransferTutar(e.target.value)}
+                                style={{ flex: 1, ...inputStyle }}
+                                required
+                            />
+                            <input
+                                type="number"
+                                placeholder="Ücret (Opsiyonel)"
+                                value={transferUcreti}
+                                onChange={e => setTransferUcreti(e.target.value)}
+                                style={{ flex: 1, ...inputStyle }}
+                            />
                         </div>
 
                         <div style={{ gridColumn: 'span 2' }}>
-                            <input type="datetime-local" value={transferTarihi} onChange={e => setTransferTarihi(e.target.value)} max="9999-12-31T23:59" style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0' }} />
+                            <input
+                                type="datetime-local"
+                                value={transferTarihi}
+                                onChange={e => setTransferTarihi(e.target.value)}
+                                max="9999-12-31T23:59"
+                                style={{ ...inputStyle }}
+                            />
                         </div>
 
-                        <button type="submit" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", gridColumn: 'span 2', padding: '15px', background: '#3182ce', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>TRANSFER YAP / BORÇ ÖDE</button>
+                        <button
+                            type="submit"
+                            className="modal-blue-btn"
+                            style={{ gridColumn: 'span 2', marginTop: '4px' }}
+                        >
+                            TRANSFER YAP / BORÇ ÖDE
+                        </button>
                     </form>
                 )}
 
@@ -111,15 +266,69 @@ const TransactionArea = ({
                 {formTab === "taksit" && (
                     <form onSubmit={taksitEkle} className="taksit-form-grid">
                         <div className="span-full"><h4 style={{ margin: '0 0 10px 0', color: '#6b46c1' }}>📦 Yeni Taksit Planı Oluştur</h4></div>
-                        <select value={taksitHesapId} onChange={e => setTaksitHesapId(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required><option value="">Hangi Karttan?</option>{hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}</select>
-                        <input placeholder="Ne aldın?" value={taksitBaslik} onChange={e => setTaksitBaslik(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
-                        <input type="number" placeholder="Toplam Borç (₺)" value={taksitToplamTutar} onChange={e => setTaksitToplamTutar(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
-                        <input type="number" placeholder="Kaç Taksit?" value={taksitSayisi} onChange={e => setTaksitSayisi(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }} required />
-                        <select value={taksitKisi || aileUyeleri[0]} onChange={e => setTaksitKisi(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
-                        <select value={taksitKategori || kategoriListesi[0]} onChange={e => setTaksitKategori(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa' }}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
-                        <input type="date" value={taksitAlisTarihi} onChange={e => setTaksitAlisTarihi(e.target.value)} max="9999-12-31" className="span-full" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #d6bcfa', boxSizing: 'border-box' }} />
-                        <div className="span-full" style={{ fontSize: '14px', color: '#553c9a', fontWeight: 'bold', padding: '10px', background: 'white', borderRadius: '8px' }}>ℹ️ Aylık: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0,00 ₺'}</div>
-                        <button type="submit" className="span-full" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", padding: '15px', background: '#805ad5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
+                        <select
+                            value={taksitHesapId}
+                            onChange={e => setTaksitHesapId(e.target.value)}
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                            required
+                        >
+                            <option value="">Hangi Karttan?</option>
+                            {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi}</option>)}
+                        </select>
+                        <input
+                            placeholder="Ne aldın?"
+                            value={taksitBaslik}
+                            onChange={e => setTaksitBaslik(e.target.value)}
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                            required
+                        />
+                        <input
+                            type="number"
+                            placeholder="Toplam Borç (₺)"
+                            value={taksitToplamTutar}
+                            onChange={e => setTaksitToplamTutar(e.target.value)}
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                            required
+                        />
+                        <input
+                            type="number"
+                            placeholder="Kaç Taksit?"
+                            value={taksitSayisi}
+                            onChange={e => setTaksitSayisi(e.target.value)}
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                            required
+                        />
+                        <select
+                            value={taksitKisi || aileUyeleri[0]}
+                            onChange={e => setTaksitKisi(e.target.value)}
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                        >
+                            {aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                        <select
+                            value={taksitKategori || kategoriListesi[0]}
+                            onChange={e => setTaksitKategori(e.target.value)}
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                        >
+                            {kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}
+                        </select>
+                        <input
+                            type="date"
+                            value={taksitAlisTarihi}
+                            onChange={e => setTaksitAlisTarihi(e.target.value)}
+                            max="9999-12-31"
+                            className="span-full"
+                            style={{ ...inputStyle, border: '1px solid #d6bcfa' }}
+                        />
+                        <div className="span-full" style={{ fontSize: '14px', color: '#553c9a', fontWeight: 'bold', padding: '10px', background: 'white', borderRadius: '8px' }}>
+                            ℹ️ Aylık: {taksitToplamTutar && taksitSayisi ? formatPara(taksitToplamTutar / taksitSayisi) : '0,00 ₺'}
+                        </div>
+                        <button
+                            type="submit"
+                            className="span-full modal-purple-btn"
+                        >
+                            KAYDET
+                        </button>
                     </form>
                 )}
 
@@ -134,23 +343,58 @@ const TransactionArea = ({
                         ) : (
                             <form onSubmit={faturaGir} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div style={{ gridColumn: 'span 2' }}>
-                                    <select value={secilenTanimId} onChange={e => setSecilenTanimId(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', boxSizing: 'border-box' }} required>
+                                    <select
+                                        value={secilenTanimId}
+                                        onChange={e => setSecilenTanimId(e.target.value)}
+                                        style={{ ...inputStyle, border: '1px solid #feb2b2' }}
+                                        required
+                                    >
                                         <option value="">Hangi Fatura?</option>
                                         {tanimliFaturalar.map(t => <option key={t.id} value={t.id}>{t.baslik} ({t.kurum})</option>)}
                                     </select>
-                                    <select value={faturaKisi} onChange={e => setFaturaKisi(e.target.value)} style={{ fontFamily: "'Georgia', 'Times New Roman', serif", marginTop: '10px', width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', boxSizing: 'border-box' }} required>
+                                    <select
+                                        value={faturaKisi}
+                                        onChange={e => setFaturaKisi(e.target.value)}
+                                        style={{ ...inputStyle, border: '1px solid #feb2b2', marginTop: '10px' }}
+                                        required
+                                    >
                                         <option value="">Kime Ait?</option>
                                         {aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}
                                     </select>
                                 </div>
 
-                                <input type="number" placeholder="Tutar (₺)" value={faturaGirisTutar} onChange={e => setFaturaGirisTutar(e.target.value)} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', width: '100%', boxSizing: 'border-box' }} required />
+                                <input
+                                    type="number"
+                                    placeholder="Tutar (₺)"
+                                    value={faturaGirisTutar}
+                                    onChange={e => setFaturaGirisTutar(e.target.value)}
+                                    style={{ ...inputStyle, border: '1px solid #feb2b2' }}
+                                    required
+                                />
 
-                                <input type="date" value={faturaGirisTarih} onChange={e => setFaturaGirisTarih(e.target.value)} max="9999-12-31" style={{ padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', width: '100%', boxSizing: 'border-box' }} required />
+                                <input
+                                    type="date"
+                                    value={faturaGirisTarih}
+                                    onChange={e => setFaturaGirisTarih(e.target.value)}
+                                    max="9999-12-31"
+                                    style={{ ...inputStyle, border: '1px solid #feb2b2' }}
+                                    required
+                                />
 
-                                <input placeholder="Açıklama (Opsiyonel)" value={faturaGirisAciklama} onChange={e => setFaturaGirisAciklama(e.target.value)} style={{ gridColumn: 'span 2', padding: '12px', borderRadius: '8px', border: '1px solid #feb2b2', width: '100%', boxSizing: 'border-box' }} />
+                                <input
+                                    placeholder="Açıklama (Opsiyonel)"
+                                    value={faturaGirisAciklama}
+                                    onChange={e => setFaturaGirisAciklama(e.target.value)}
+                                    style={{ gridColumn: 'span 2', ...inputStyle, border: '1px solid #feb2b2' }}
+                                />
 
-                                <button type="submit" style={{ fontFamily: "'Georgia', 'Times New Roman', serif", gridColumn: 'span 2', padding: '15px', background: '#c53030', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' }}>KAYDET</button>
+                                <button
+                                    type="submit"
+                                    className="modal-red-btn"
+                                    style={{ gridColumn: 'span 2', marginTop: '4px' }}
+                                >
+                                    KAYDET
+                                </button>
                             </form>
                         )}
                     </div>
@@ -158,7 +402,7 @@ const TransactionArea = ({
             </div>
 
             {/* 2. KART: GEÇMİŞ LİSTESİ */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+            <div style={{ ...cardStyle, marginTop: '5px' }}>
 
                 {/* Üst Başlık ve Ay Seçimi */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>

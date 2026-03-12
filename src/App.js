@@ -124,6 +124,7 @@ function App() {
     const [borcToplamTutar, setBorcToplamTutar] = useState("");
     const [borcKalanTutar, setBorcKalanTutar] = useState("");
     const [borcSonOdemeTarihi, setBorcSonOdemeTarihi] = useState("");
+    const [borcKategori, setBorcKategori] = useState("");
 
     // Borç Ödeme Formu
     const [borcOdemeHesapId, setBorcOdemeHesapId] = useState("");
@@ -380,8 +381,26 @@ function App() {
             }
         });
 
+        // 6. Borçlar
+        borclar.forEach(b => {
+            if (b.sonOdemeTarihi && b.kalanTutar > 0) {
+                const sonOdeme = new Date(b.sonOdemeTarihi);
+                const sO = new Date(sonOdeme.setHours(0, 0, 0, 0));
+                const bG = new Date(bugun.setHours(0, 0, 0, 0));
+
+                const kalanMilisaniye = sO - bG;
+                const kalanGun = Math.ceil(kalanMilisaniye / (1000 * 60 * 60 * 24));
+
+                if (kalanGun < 0) {
+                    tempBildirimler.push({ id: b.id, tip: 'borc_hatirlatma', mesaj: `🔥 ${b.ad} Borcu GECİKTİ! (${Math.abs(kalanGun)} gün)`, tutar: b.kalanTutar, data: b, renk: 'red' });
+                } else if (kalanGun <= 5) {
+                    tempBildirimler.push({ id: b.id, tip: 'borc_hatirlatma', mesaj: `⚠️ ${b.ad} Borcu için son ${kalanGun} gün!`, tutar: b.kalanTutar, data: b, renk: 'orange' });
+                }
+            }
+        });
+
         setBildirimler(tempBildirimler);
-    }, [islemler, abonelikler, taksitler, maaslar, hesaplar, bekleyenFaturalar, tanimliFaturalar]);
+    }, [islemler, abonelikler, taksitler, maaslar, hesaplar, bekleyenFaturalar, tanimliFaturalar, borclar]);
 
 
     // --- HESAPLAMALAR ---
@@ -453,13 +472,14 @@ function App() {
             ad: borcAd,
             toplamTutar: toplam,
             kalanTutar: kalan,
-            eklenmeTarihi: new Date()
+            eklenmeTarihi: new Date(),
+            kategori: borcKategori || kategoriListesi[0]
         };
         if (borcSonOdemeTarihi) yeniData.sonOdemeTarihi = borcSonOdemeTarihi;
 
         await addDoc(collection(db, "borclar"), yeniData);
         toast.success("Borç kaydedildi!");
-        setBorcAd(""); setBorcToplamTutar(""); setBorcKalanTutar(""); setBorcSonOdemeTarihi("");
+        setBorcAd(""); setBorcToplamTutar(""); setBorcKalanTutar(""); setBorcSonOdemeTarihi(""); setBorcKategori("");
     }
 
     const borcDuzenle = async (e) => {
@@ -470,7 +490,8 @@ function App() {
         const guncelData = {
             ad: borcAd,
             toplamTutar: toplam,
-            kalanTutar: kalan
+            kalanTutar: kalan,
+            kategori: borcKategori || kategoriListesi[0]
         };
         if (borcSonOdemeTarihi) guncelData.sonOdemeTarihi = borcSonOdemeTarihi;
         else guncelData.sonOdemeTarihi = null; // opsiyonel alanı temizle
@@ -478,7 +499,7 @@ function App() {
         await updateDoc(doc(db, "borclar", seciliVeri.id), guncelData);
         toast.success("Borç güncellendi!");
         setAktifModal(null);
-        setBorcAd(""); setBorcToplamTutar(""); setBorcKalanTutar(""); setBorcSonOdemeTarihi("");
+        setBorcAd(""); setBorcToplamTutar(""); setBorcKalanTutar(""); setBorcSonOdemeTarihi(""); setBorcKategori("");
     }
 
     const borcOde = async (e) => {
@@ -502,7 +523,7 @@ function App() {
             aileKodu,
             hesapId: borcOdemeHesapId,
             islemTipi: "gider",
-            kategori: "Borç Ödemesi",
+            kategori: seciliVeri.kategori || "Borç Ödemesi",
             tutar: odemeTutari,
             aciklama: `${seciliVeri.ad} Borç Ödemesi`,
             tarih: new Date(),
@@ -564,6 +585,11 @@ function App() {
                     // 3. Taksit Bağlantısı Varsa Sayacı Düş (Mevcut mantık aynen kalsın)
                     if (data.kategori === "Taksit" && data.taksitId) {
                         await updateDoc(doc(db, "taksitler", data.taksitId), { odenmisTaksit: increment(-1) });
+                    }
+
+                    // 4. Borç Bağlantısı Varsa Borcu Geri Yükle
+                    if (data.borcId) {
+                        await updateDoc(doc(db, "borclar", data.borcId), { kalanTutar: increment(data.tutar) });
                     }
 
                     await deleteDoc(docRef);
@@ -1093,6 +1119,7 @@ function App() {
                 borcToplamTutar={borcToplamTutar} setBorcToplamTutar={setBorcToplamTutar}
                 borcKalanTutar={borcKalanTutar} setBorcKalanTutar={setBorcKalanTutar}
                 borcSonOdemeTarihi={borcSonOdemeTarihi} setBorcSonOdemeTarihi={setBorcSonOdemeTarihi}
+                borcKategori={borcKategori} setBorcKategori={setBorcKategori}
                 borcOdemeHesapId={borcOdemeHesapId} setBorcOdemeHesapId={setBorcOdemeHesapId}
                 borcOdemeTutar={borcOdemeTutar} setBorcOdemeTutar={setBorcOdemeTutar}
                 borcEkle={borcEkle}

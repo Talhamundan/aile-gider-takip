@@ -1,5 +1,18 @@
 import React from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import {
+    PieChart,
+    Pie,
+    Cell,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid
+} from 'recharts';
+import { cardStyle } from '../utils/helpers';
 
 const DashboardStats = ({
     user,
@@ -35,9 +48,27 @@ const DashboardStats = ({
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ fontSize: '13px', fontWeight: '600', color: '#4a5568', marginRight: '5px' }}>Hoşgeldin, {user?.displayName?.split(' ')[0]}</span>
-                    <button onClick={() => setAktifModal('ayarlar_yonetim')} style={{ background: '#e2e8f0', color: '#4a5568', border: 'none', padding: '8px 12px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>⚙️ Ayarlar</button>
-                    <button onClick={aileKoduCikis} style={{ background: '#e2e8f0', color: '#4a5568', border: 'none', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Kod Değiş</button>
-                    <button onClick={cikisYap} style={{ background: '#e53e3e', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Çıkış</button>
+                    <button
+                        onClick={() => setAktifModal('ayarlar_yonetim')}
+                        className="btn-ui btn-ui-neutral"
+                        style={{ fontSize: '12px' }}
+                    >
+                        ⚙️ Ayarlar
+                    </button>
+                    <button
+                        onClick={aileKoduCikis}
+                        className="btn-ui btn-ui-neutral"
+                        style={{ fontSize: '12px' }}
+                    >
+                        Kod Değiş
+                    </button>
+                    <button
+                        onClick={cikisYap}
+                        className="btn-ui btn-ui-danger"
+                        style={{ fontSize: '12px' }}
+                    >
+                        Çıkış
+                    </button>
                 </div>
             </div>
 
@@ -66,31 +97,31 @@ const DashboardStats = ({
             )}
 
             {/* ÜST KARTLAR */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', borderLeft: '5px solid #48bb78' }}>
-                    <h3 style={{ margin: 0, color: '#888', fontSize: '11px', letterSpacing: '1px' }}>TOPLAM GELİR ({aktifAy})</h3>
-                    <h1 style={{ fontSize: '26px', margin: '10px 0', color: '#333' }}>{formatPara(toplamGelir)}</h1>
+            <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
+                <div className="responsive-card" style={{ ...cardStyle, borderLeft: '5px solid #48bb78' }}>
+                    <div className="card-title-sm responsive-title">TOPLAM GELİR ({aktifAy})</div>
+                    <div className="kpi-amount responsive-amount">{formatPara(toplamGelir)}</div>
                 </div>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', borderLeft: '5px solid #F59E0B' }}>
-                    <span style={{ color: '#888', fontSize: '11px', letterSpacing: '1px' }}>BUGÜN HARCANAN</span>
-                    <h2 style={{ color: '#333', margin: '10px 0', fontSize: '26px' }}>{formatPara(bugunGider)}</h2>
+                <div className="responsive-card" style={{ ...cardStyle, borderLeft: '5px solid #F59E0B' }}>
+                    <div className="card-title-sm responsive-title">BUGÜN HARCANAN</div>
+                    <div className="kpi-amount responsive-amount">{formatPara(bugunGider)}</div>
                 </div>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', borderLeft: '5px solid #f56565' }}>
-                    <span style={{ color: '#888', fontSize: '11px', letterSpacing: '1px' }}>GİDER ({aktifAy})</span>
-                    <h2 style={{ color: '#333', margin: '10px 0', fontSize: '24px' }}>{formatPara(toplamGider)}</h2>
+                <div className="responsive-card" style={{ ...cardStyle, borderLeft: '5px solid #f56565' }}>
+                    <div className="card-title-sm responsive-title">GİDER ({aktifAy})</div>
+                    <div className="kpi-amount-sm responsive-amount">{formatPara(toplamGider)}</div>
                 </div>
             </div>
 
             {/* YENİ SATIR: AİLE BİREYLERİ HARCAMALARI */}
             <div style={{ marginBottom: '30px' }}>
-                <h4 style={{ margin: '0 0 15px 0', color: '#4a5568' }}>👨‍👩‍👧‍👦 Kişi Bazlı Harcamalar ({aktifAy})</h4>
+                <h4 className="card-title" style={{ margin: '0 0 15px 0' }}>👨‍👩‍👧‍👦 Kişi Bazlı Harcamalar ({aktifAy})</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`, gap: '20px' }}>
                     {aileUyeleri.map(uye => {
                         const uyeTutar = filtrelenmisIslemler.filter(i => i.islemTipi === 'gider' && i.harcayan === uye).reduce((acc, i) => acc + i.tutar, 0);
                         return (
-                            <div key={uye} style={{ background: 'white', padding: '15px', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', borderLeft: '4px solid #805ad5' }}>
-                                <span style={{ color: '#718096', fontSize: '12px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{uye}</span>
-                                <h3 style={{ margin: '5px 0 0 0', color: '#2d3748', fontSize: '20px' }}>{formatPara(uyeTutar)}</h3>
+                            <div key={uye} className="responsive-card" style={{ ...cardStyle, borderLeft: '4px solid #805ad5' }}>
+                                <div className="card-title-sm responsive-title">{uye}</div>
+                                <div className="kpi-amount-sm responsive-amount">{formatPara(uyeTutar)}</div>
                             </div>
                         )
                     })}
@@ -99,8 +130,8 @@ const DashboardStats = ({
 
             {/* ORTA BÖLÜM: GRAFİKLER */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '25px', marginBottom: '30px' }}>
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', minHeight: '300px' }}>
-                    <h4 style={{ margin: '0 0 20px 0', color: '#2d3748' }}>📅 Günlük Harcama Trendi ({aktifAy})</h4>
+                <div className="responsive-card" style={{ ...cardStyle, minHeight: '300px' }}>
+                    <h4 className="card-title" style={{ margin: '0 0 20px 0' }}>📅 Günlük Harcama Trendi ({aktifAy})</h4>
                     <ResponsiveContainer width="100%" height={250}>
                         <BarChart data={gunlukVeri}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -117,8 +148,8 @@ const DashboardStats = ({
                     )}
                 </div>
 
-                <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <h4 style={{ color: '#2d3748', marginBottom: '10px' }}>Kategori Dağılımı ({aktifAy})</h4>
+                <div className="responsive-card" style={{ ...cardStyle, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <h4 className="card-title" style={{ marginBottom: '10px' }}>Kategori Dağılımı ({aktifAy})</h4>
                     <ResponsiveContainer width="100%" height={250}><PieChart><Pie data={kategoriVerisi} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name }) => name}>{kategoriVerisi.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}</Pie><Tooltip formatter={(value) => formatPara(value)} /><Legend /></PieChart></ResponsiveContainer>
                 </div>
             </div>

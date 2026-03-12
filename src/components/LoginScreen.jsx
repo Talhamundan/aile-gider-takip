@@ -23,7 +23,7 @@ const LoginScreen = ({
             alignItems: 'center',
             color: 'white',
             fontSize: '1.2rem',
-            fontFamily: "'Georgia', 'Times New Roman', serif"
+            fontFamily: 'inherit'
         }}>
             Yükleniyor...
         </div>
@@ -67,7 +67,7 @@ const LoginScreen = ({
                 width: '90%',
                 maxWidth: '400px',
                 textAlign: 'center',
-                fontFamily: "'Georgia', 'Times New Roman', serif",
+                fontFamily: 'inherit',
                 position: 'relative',
                 zIndex: 10
             }}>
