@@ -54,10 +54,10 @@ const Sidebar = ({
     toplamKalanBorc = 0
 }) => {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+        <div className="sidebar-stack" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
             {/* LİMİT KARTI */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div className="sidebar-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <h4 style={{ margin: 0, color: '#2d3748' }}>🎯 Aylık Bütçe Limiti</h4>
                     </div>
@@ -71,23 +71,23 @@ const Sidebar = ({
             </div>
 
             {/* MAAŞLAR */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div className="sidebar-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>💰 Maaşlar & Düzenli Gelirler</h4>
                     <button onClick={() => modalAc('yeni_maas')} className="btn-ui btn-ui-success" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
                     </button>
                 </div>
-                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                <div className="sidebar-scroll-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                     {maaslar.map(m => {
                         const hesap = hesaplar.find(h => h.id === m.hesapId);
                         return (
-                            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
-                                <div>
+                            <div key={m.id} className="sidebar-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
+                                <div className="sidebar-row-main">
                                     <div style={{ fontWeight: 'bold' }}>{m.ad}</div>
                                     <div style={{ fontSize: '11px', color: '#999' }}>Her ayın {m.gun}. günü • {hesap?.hesapAdi}</div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <div className="sidebar-actions" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                     <span style={{ color: 'green', fontWeight: 'bold' }}>{formatPara(m.tutar)}</span>
                                     <span onClick={() => modalAc('duzenle_maas', m)} style={{ cursor: 'pointer', fontSize: '12px', marginLeft: '5px' }}>✏️</span>
                                     <span onClick={() => normalSil("maaslar", m.id)} style={{ cursor: 'pointer', color: 'red', fontSize: '12px' }}>🗑️</span>
@@ -99,8 +99,8 @@ const Sidebar = ({
             </div>
 
             {/* HESAPLAR */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div className="sidebar-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>💳 Cüzdanlar & Kartlar</h4>
                     <button onClick={() => modalAc('yeni_hesap')} className="btn-ui btn-ui-primary" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
@@ -110,9 +110,9 @@ const Sidebar = ({
                     {hesaplar.map(h => {
                         let gosterilenBakiye = h.guncelBakiye;
                         return (
-                            <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
-                                <div><b>{h.hesapAdi}</b> <small style={{ color: '#aaa' }}>({h.hesapTipi})</small><span onClick={() => modalAc('duzenle_hesap', h)} style={{ fontSize: '10px', cursor: 'pointer', marginLeft: '5px', color: 'blue' }}>✏️</span></div>
-                                <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                            <div key={h.id} className="sidebar-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
+                                <div className="sidebar-row-main"><b>{h.hesapAdi}</b> <small style={{ color: '#aaa' }}>({h.hesapTipi})</small><span onClick={() => modalAc('duzenle_hesap', h)} style={{ fontSize: '10px', cursor: 'pointer', marginLeft: '5px', color: 'blue' }}>✏️</span></div>
+                                <div className="sidebar-actions" style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
                                     <span style={{ color: gosterilenBakiye < 0 ? 'red' : 'green', fontWeight: '600' }}>{gosterilenBakiye > 0 && '+'}{formatPara(gosterilenBakiye)}</span>
                                     {h.hesapTipi === 'krediKarti' && parseFloat(h.guncelBakiye) !== 0 && <button onClick={() => modalAc('kredi_karti_ode', h)} style={{ background: '#805ad5', color: 'white', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', marginLeft: '5px' }}>Borç Öde</button>}
                                     <span onClick={() => hesapSilGuvenli(h.id, h.hesapAdi)} style={{ cursor: 'pointer', color: 'red', fontSize: '12px' }}>🗑️</span>
@@ -134,7 +134,7 @@ const Sidebar = ({
             </div>
 
             {/* TAKSİTLER */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
                 <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#2d3748' }}>📦 Taksitli Alışverişler</h4>
                 {taksitler.length === 0 ? <p style={{ fontSize: '13px', color: '#aaa' }}>Aktif taksit borcu yok.</p> :
                     <div style={{ marginBottom: '15px' }}>
@@ -149,8 +149,8 @@ const Sidebar = ({
                             }
                             return (
                                 <div key={t.id} style={{ padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '13px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                        <div><b>{t.baslik}</b><div style={{ fontSize: '10px', color: '#999' }}>{t.alanKisi} • {t.kategori}</div></div>
+                                    <div className="sidebar-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                        <div className="sidebar-row-main"><b>{t.baslik}</b><div style={{ fontSize: '10px', color: '#999' }}>{t.alanKisi} • {t.kategori}</div></div>
                                         <span style={{ fontWeight: 'bold' }}>{formatPara(t.toplamTutar - (t.aylikTutar * t.odenmisTaksit))} <small style={{ color: '#999' }}>Kaldı</small></span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#666', marginBottom: '5px' }}>
@@ -169,15 +169,15 @@ const Sidebar = ({
                         })}
                     </div>
                 }
-                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <div className="sidebar-card-footer-row" style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                     <span style={{ color: '#718096' }}>Aylık Yük: <b style={{ color: '#2d3748' }}>{formatPara(toplamAylikTaksitOdemesi)}</b></span>
                     <span style={{ color: '#718096' }}>Kalan Toplam Borç: <b style={{ color: '#e53e3e' }}>{formatPara(toplamKalanTaksitBorcu)}</b></span>
                 </div>
             </div>
 
             {/* FATURALAR KARTI (SOL TARAF) */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div className="sidebar-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>🧾 Faturalar</h4>
                     <button onClick={() => modalAc('yeni_fatura_tanim')} className="btn-ui btn-ui-neutral" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
@@ -189,25 +189,25 @@ const Sidebar = ({
                         // Bu tanıma ait bekleyen bir fatura var mı?
                         const bekleyen = bekleyenFaturalar.find(f => f.tanimId === tanim.id);
                         return (
-                            <div key={tanim.id} style={{ marginBottom: '10px', border: '1px solid #eee', borderRadius: '10px', overflow: 'hidden' }}>
-                                <div style={{ padding: '10px', background: '#f7fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div>
+                            <div key={tanim.id} className="sidebar-bill-item" style={{ marginBottom: '10px', border: '1px solid #eee', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div className="sidebar-row" style={{ padding: '10px', background: '#f7fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div className="sidebar-row-main">
                                         <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#2d3748' }}>{tanim.baslik}</div>
                                         <div style={{ fontSize: '11px', color: '#718096' }}>{tanim.kurum} • {tanim.aboneNo}</div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                    <div className="sidebar-actions" style={{ display: 'flex', gap: '8px' }}>
                                         <span onClick={() => modalAc('duzenle_fatura_tanim', tanim)} style={{ cursor: 'pointer', fontSize: '14px' }}>✏️</span>
                                         <span onClick={() => normalSil("fatura_tanimlari", tanim.id)} style={{ cursor: 'pointer', fontSize: '14px', color: '#e53e3e' }}>🗑️</span>
                                     </div>
                                 </div>
                                 {bekleyen ? (
-                                    <div style={{ padding: '10px', background: '#fff5f5', borderTop: '1px solid #feb2b2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
+                                    <div className="sidebar-row" style={{ padding: '10px', background: '#fff5f5', borderTop: '1px solid #feb2b2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div className="sidebar-row-main">
                                             <div style={{ fontWeight: 'bold', color: '#c53030' }}>{formatPara(bekleyen.tutar)}</div>
                                             <div style={{ fontSize: '11px', color: '#c53030' }}>Son: {tarihSadeceGunAyYil(bekleyen.sonOdemeTarihi)}</div>
                                             {bekleyen.aciklama && <div style={{ fontSize: '10px', color: '#718096' }}>{bekleyen.aciklama}</div>}
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div className="sidebar-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                             <span onClick={() => modalAc('duzenle_bekleyen_fatura', bekleyen)} style={{ cursor: 'pointer', fontSize: '14px' }}>✏️</span>
                                             <span onClick={() => normalSil("bekleyen_faturalar", bekleyen.id)} style={{ cursor: 'pointer', fontSize: '14px', color: '#c53030' }}>🗑️</span>
                                             <button onClick={() => modalAc('fatura_ode', bekleyen)} style={{ background: '#c53030', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>ÖDE</button>
@@ -225,8 +225,8 @@ const Sidebar = ({
             </div>
 
             {/* ABONELİKLER */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div className="sidebar-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>🔄 Sabit Giderler</h4>
                     <button onClick={() => modalAc('yeni_abonelik')} className="btn-ui btn-ui-primary" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
@@ -236,14 +236,14 @@ const Sidebar = ({
                     {abonelikler.map(abo => {
                         const hesap = hesaplar.find(h => h.id === abo.hesapId);
                         return (
-                            <div key={abo.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
-                                <div>
+                            <div key={abo.id} className="sidebar-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
+                                <div className="sidebar-row-main">
                                     <div style={{ fontWeight: 'bold' }}>{abo.ad}</div>
                                     <div style={{ fontSize: '11px', color: '#999' }}>
                                         {abo.gun}. gün • {abo.kategori} • {abo.kisi || "Belirtilmemiş"} • {hesap?.hesapAdi || "Hesap Yok"}
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className="sidebar-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <div style={{ fontWeight: 'bold', color: '#e53e3e' }}>{formatPara(abo.tutar)}</div>
                                     <button onClick={() => abonelikOde(abo)} style={{ background: '#e2e8f0', border: 'none', cursor: 'pointer', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' }}>Öde</button>
                                     <span onClick={() => modalAc('duzenle_abonelik', abo)} style={{ cursor: 'pointer', fontSize: '12px' }}>✏️</span>
@@ -260,8 +260,8 @@ const Sidebar = ({
             </div>
 
             {/* BORÇLAR KARTI */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="sidebar-card" style={{ background: 'white', padding: '20px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }}>
+                <div className="sidebar-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h4 style={{ margin: 0, color: '#2d3748' }}>💸 Borçlar</h4>
                     <button onClick={() => modalAc('yeni_borc')} className="btn-ui btn-ui-danger" style={{ fontSize: '12px' }}>
                         <span style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '4px' }}>+</span> Ekle
@@ -278,8 +278,8 @@ const Sidebar = ({
                                 <div key={b.id} style={{ padding: '10px', borderBottom: '1px solid #f0f0f0', fontSize: '14px' }}>
 
                                     {/* Üst Kısım: Ad ve Kaldı */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <div style={{ fontWeight: 'bold', color: '#2d3748' }}>{b.ad}</div>
+                                    <div className="sidebar-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <div className="sidebar-row-main" style={{ fontWeight: 'bold', color: '#2d3748' }}>{b.ad}</div>
                                         <div>
                                             <span style={{ fontWeight: 'bold', color: '#2d3748' }}>{formatPara(kalan)}</span>
                                             <span style={{ color: '#a0aec0', fontSize: '11px', marginLeft: '4px' }}>Kaldı</span>
@@ -296,14 +296,14 @@ const Sidebar = ({
                                     <div style={{ width: '100%', height: '8px', background: '#edf2f7', borderRadius: '4px', marginBottom: '15px' }}></div>
 
                                     {/* Alt Kısım: Son Ödeme, Buton ve İkonlar */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div className="sidebar-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         {/* Son Ödeme */}
-                                        <div style={{ fontSize: '11px', color: '#e53e3e' }}>
+                                        <div className="sidebar-row-main" style={{ fontSize: '11px', color: '#e53e3e' }}>
                                             {b.sonOdemeTarihi ? `Son Ödeme: ${tarihSadeceGunAyYil(b.sonOdemeTarihi)}` : ''}
                                         </div>
 
                                         {/* Buton ve Aksiyonlar */}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div className="sidebar-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                             <button
                                                 onClick={() => modalAc('borc_ode', b)}
                                                 style={{ background: '#ef4444', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>

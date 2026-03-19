@@ -167,6 +167,7 @@ const Modals = ({
     islemAciklama, setIslemAciklama,
     islemTutar, setIslemTutar,
     islemTarihi, setIslemTarihi,
+    secilenHesapId, setSecilenHesapId,
     harcayanKisi, setHarcayanKisi,
     kategori, setKategori,
     aboAd, setAboAd,
@@ -339,6 +340,16 @@ const Modals = ({
         <span onClick={() => setAktifModal(null)} style={closeButtonStyle}>✕</span>
     );
 
+    const duzenleIslemKategoriSecenekleri = Array.from(
+        new Set(
+            [
+                seciliVeri?.kategori,
+                ...(kategoriListesi || []),
+                seciliVeri?.islemTipi === 'transfer' ? 'Transfer' : null
+            ].filter(Boolean)
+        )
+    );
+
     return (
         <div style={{
             position: 'fixed',
@@ -454,10 +465,18 @@ const Modals = ({
                 {aktifModal === 'duzenle_islem' && <form onSubmit={islemDuzenle}>
                     <div style={headerStyle}><h3 style={titleStyle}>İşlem Düzenle</h3><CloseButton /></div>
                     <input value={islemAciklama} onChange={e => setIslemAciklama(e.target.value)} style={inputStyle} />
+                    {seciliVeri?.islemTipi !== 'transfer' && (
+                        <select value={secilenHesapId} onChange={e => setSecilenHesapId(e.target.value)} style={inputStyle} required>
+                            <option value="">Ödeme Aracı / Hesap</option>
+                            {hesaplar.map(h => <option key={h.id} value={h.id}>{h.hesapAdi} ({formatPara(h.guncelBakiye)})</option>)}
+                        </select>
+                    )}
                     <input type="number" value={islemTutar} onChange={e => setIslemTutar(e.target.value)} style={inputStyle} />
                     <input type="datetime-local" value={islemTarihi} onChange={e => setIslemTarihi(e.target.value)} max="9999-12-31T23:59" style={inputStyle} />
                     <select value={harcayanKisi} onChange={e => setHarcayanKisi(e.target.value)} style={inputStyle}>{aileUyeleri.map(u => <option key={u} value={u}>{u}</option>)}</select>
-                    <select value={kategori} onChange={e => setKategori(e.target.value)} style={inputStyle}>{kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}</select>
+                    <select value={kategori} onChange={e => setKategori(e.target.value)} style={inputStyle}>
+                        {duzenleIslemKategoriSecenekleri.map(k => <option key={k} value={k}>{k}</option>)}
+                    </select>
                     <button type="submit" className="modal-primary-btn">Kaydet</button>
                 </form>}
 
@@ -617,8 +636,6 @@ const Modals = ({
 
                 {aktifModal === 'ayarlar_yonetim' && <div>
                     <div style={headerStyle}><h3 style={titleStyle}>⚙️ Ayarlar</h3><CloseButton /></div>
-
-                    <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '15px 0' }} />
                     <h4 style={{ margin: '0 0 10px 0' }}>👨‍👩‍👧‍👦 Aile Bireyleri</h4>
                     <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {aileUyeleri.map(k => (<li key={k} style={{ background: '#edf2f7', padding: '4px 8px', borderRadius: '12px', fontSize: '13px' }}>{k} <span onClick={() => handleDeleteRequest('member', k)} style={{ color: 'red', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' }}>X</span></li>))}

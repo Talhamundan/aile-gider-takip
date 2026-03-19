@@ -128,7 +128,7 @@ const TransactionArea = ({
                 {/* GELİR GİDER FORMU */}
                 {formTab === "islem" && (
                     <form onSubmit={islemEkle} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div className="transaction-form-row" style={{ display: 'flex', gap: '10px' }}>
                             <select
                                 value={secilenHesapId}
                                 onChange={e => setSecilenHesapId(e.target.value)}
@@ -146,7 +146,7 @@ const TransactionArea = ({
                                 <option value="gelir">🟢 Gelir</option>
                             </select>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div className="transaction-form-row" style={{ display: 'flex', gap: '10px' }}>
                             <select
                                 value={harcayanKisi || aileUyeleri[0]}
                                 onChange={e => {
@@ -166,7 +166,7 @@ const TransactionArea = ({
                                 {kategoriListesi.map(k => <option key={k} value={k}>{k}</option>)}
                             </select>
                         </div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div className="transaction-form-row" style={{ display: 'flex', gap: '10px' }}>
                             <input
                                 placeholder="Açıklama"
                                 value={islemAciklama}
@@ -200,7 +200,7 @@ const TransactionArea = ({
 
                 {/* TRANSFER FORMU */}
                 {formTab === "transfer" && (
-                    <form onSubmit={transferYap} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: '#ebf8ff', padding: '20px', borderRadius: '10px' }}>
+                    <form onSubmit={transferYap} className="transfer-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: '#ebf8ff', padding: '20px', borderRadius: '10px' }}>
                         <div>
                             <label style={{ fontSize: '12px', color: '#2b6cb0' }}>Nereden?</label>
                             <select
@@ -224,7 +224,7 @@ const TransactionArea = ({
                             </select>
                         </div>
 
-                        <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
+                        <div className="transfer-span-full transfer-input-row" style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
                             <input
                                 type="number"
                                 placeholder="İşlem Tutarı (₺)"
@@ -242,7 +242,7 @@ const TransactionArea = ({
                             />
                         </div>
 
-                        <div style={{ gridColumn: 'span 2' }}>
+                        <div className="transfer-span-full" style={{ gridColumn: 'span 2' }}>
                             <input
                                 type="datetime-local"
                                 value={transferTarihi}
@@ -254,7 +254,7 @@ const TransactionArea = ({
 
                         <button
                             type="submit"
-                            className="modal-blue-btn"
+                            className="modal-blue-btn transfer-span-full"
                             style={{ gridColumn: 'span 2', marginTop: '4px' }}
                         >
                             TRANSFER YAP / BORÇ ÖDE
@@ -341,8 +341,8 @@ const TransactionArea = ({
                                 ⚠️ Önce sol taraftaki panelden bir fatura/abone tanımı eklemelisiniz.
                             </div>
                         ) : (
-                            <form onSubmit={faturaGir} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <div style={{ gridColumn: 'span 2' }}>
+                            <form onSubmit={faturaGir} className="invoice-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div className="invoice-span-full" style={{ gridColumn: 'span 2' }}>
                                     <select
                                         value={secilenTanimId}
                                         onChange={e => setSecilenTanimId(e.target.value)}
@@ -385,12 +385,13 @@ const TransactionArea = ({
                                     placeholder="Açıklama (Opsiyonel)"
                                     value={faturaGirisAciklama}
                                     onChange={e => setFaturaGirisAciklama(e.target.value)}
+                                    className="invoice-span-full"
                                     style={{ gridColumn: 'span 2', ...inputStyle, border: '1px solid #feb2b2' }}
                                 />
 
                                 <button
                                     type="submit"
-                                    className="modal-red-btn"
+                                    className="modal-red-btn invoice-span-full"
                                     style={{ gridColumn: 'span 2', marginTop: '4px' }}
                                 >
                                     KAYDET
@@ -405,7 +406,7 @@ const TransactionArea = ({
             <div style={{ ...cardStyle, marginTop: '5px' }}>
 
                 {/* Üst Başlık ve Ay Seçimi */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
+                <div className="history-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '15px' }}>
                     <h4 style={{ marginTop: 0, color: '#2c3e50', margin: 0 }}>📜 Aile Harcama Geçmişi</h4>
                     <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '5px', WebkitOverflowScrolling: 'touch' }}>
                         {mevcutAylar.map(ay => (
@@ -415,7 +416,7 @@ const TransactionArea = ({
                 </div>
 
                 {/* --- YENİ FİLTRE ALANI --- */}
-                <div style={{ background: '#f7fafc', padding: '15px', borderRadius: '10px', marginBottom: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', border: '1px solid #edf2f7' }}>
+                <div className="history-filter-bar" style={{ background: '#f7fafc', padding: '15px', borderRadius: '10px', marginBottom: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', border: '1px solid #edf2f7' }}>
                     {/* Arama Kutusu */}
                     <div style={{ flex: 2, minWidth: '200px', display: 'flex', alignItems: 'center', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0 10px' }}>
                         <span style={{ fontSize: '16px' }}>🔍</span>
@@ -449,39 +450,41 @@ const TransactionArea = ({
                     </div>
                 </div>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '15px' }}>
-                    <thead><tr style={{ textAlign: 'left', color: '#718096', borderBottom: '2px solid #e2e8f0' }}><th style={{ padding: '10px' }}>Tarih</th><th style={{ padding: '10px' }}>Kişi</th><th style={{ padding: '10px' }}>Hesap</th><th style={{ padding: '10px' }}>Kategori</th><th style={{ padding: '10px' }}>Açıklama</th><th style={{ padding: '10px' }}>Tutar</th><th></th><th></th></tr></thead>
-                    <tbody>
-                        {filtrelenmisIslemler.map(i => {
-                            const hesap = hesaplar.find(h => h.id === i.hesapId);
-                            let hesapAdi = hesap?.hesapAdi || "Bilinmeyen";
-                            let renk = 'black';
-                            if (i.islemTipi === 'transfer') {
-                                const kaynak = hesaplar.find(h => h.id === i.kaynakId)?.hesapAdi;
-                                const hedef = hesaplar.find(h => h.id === i.hedefId)?.hesapAdi;
-                                hesapAdi = `${kaynak} ➝ ${hedef}`;
-                                renk = '#3182ce';
-                            } else if (i.islemTipi === 'gelir') {
-                                renk = 'green';
-                            } else {
-                                renk = '#e53e3e';
-                            }
+                <div className="history-table-wrap">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '15px' }}>
+                        <thead><tr style={{ textAlign: 'left', color: '#718096', borderBottom: '2px solid #e2e8f0' }}><th style={{ padding: '10px' }}>Tarih</th><th style={{ padding: '10px' }}>Kişi</th><th style={{ padding: '10px' }}>Hesap</th><th style={{ padding: '10px' }}>Kategori</th><th style={{ padding: '10px' }}>Açıklama</th><th style={{ padding: '10px' }}>Tutar</th><th></th><th></th></tr></thead>
+                        <tbody>
+                            {filtrelenmisIslemler.map(i => {
+                                const hesap = hesaplar.find(h => h.id === i.hesapId);
+                                let hesapAdi = hesap?.hesapAdi || "Bilinmeyen";
+                                let renk = 'black';
+                                if (i.islemTipi === 'transfer') {
+                                    const kaynak = hesaplar.find(h => h.id === i.kaynakId)?.hesapAdi;
+                                    const hedef = hesaplar.find(h => h.id === i.hedefId)?.hesapAdi;
+                                    hesapAdi = `${kaynak} ➝ ${hedef}`;
+                                    renk = '#3182ce';
+                                } else if (i.islemTipi === 'gelir') {
+                                    renk = 'green';
+                                } else {
+                                    renk = '#e53e3e';
+                                }
 
-                            return (
-                                <tr key={i.id} style={{ borderBottom: '1px solid #f7fafc' }}>
-                                    <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', color: '#718096', cursor: 'pointer' }}>{tarihFormatla(i.tarih)}</td>
-                                    <td style={{ padding: '10px', fontWeight: '600', color: '#4a5568', fontSize: '14px' }}>{i.harcayan || '-'}</td>
-                                    <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>{hesapAdi}</td>
-                                    <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', cursor: 'pointer' }}>{i.kategori}</td>
-                                    <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', cursor: 'pointer' }}>{i.aciklama}</td>
-                                    <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', fontWeight: 'bold', color: renk, cursor: 'pointer' }}>{formatPara(i.tutar)}</td>
-                                    <td><span onClick={() => modalAc('duzenle_islem', i)} style={{ cursor: 'pointer' }}>✏️</span></td>
-                                    <td><span onClick={() => islemSil(i.id)} style={{ cursor: 'pointer' }}>🗑️</span></td>
-                                </tr>
-                            )
-                        })}
-                    </tbody>
-                </table>
+                                return (
+                                    <tr key={i.id} style={{ borderBottom: '1px solid #f7fafc' }}>
+                                        <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', color: '#718096', cursor: 'pointer' }}>{tarihFormatla(i.tarih)}</td>
+                                        <td style={{ padding: '10px', fontWeight: '600', color: '#4a5568', fontSize: '14px' }}>{i.harcayan || '-'}</td>
+                                        <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>{hesapAdi}</td>
+                                        <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', cursor: 'pointer' }}>{i.kategori}</td>
+                                        <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', cursor: 'pointer' }}>{i.aciklama}</td>
+                                        <td onClick={() => modalAc('duzenle_islem', i)} style={{ padding: '10px', fontWeight: 'bold', color: renk, cursor: 'pointer' }}>{formatPara(i.tutar)}</td>
+                                        <td><span onClick={() => modalAc('duzenle_islem', i)} style={{ cursor: 'pointer' }}>✏️</span></td>
+                                        <td><span onClick={() => islemSil(i.id)} style={{ cursor: 'pointer' }}>🗑️</span></td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
 
                 <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '2px solid #f0f0f0', textAlign: 'right', color: '#2d3748', fontSize: '16px', fontWeight: 'bold' }}>
                     Net Toplam: <span style={{ color: netToplam >= 0 ? 'green' : '#e53e3e' }}>{formatPara(netToplam)}</span>

@@ -22,6 +22,19 @@ import 'react-toastify/dist/ReactToastify.css';
 const auth = getAuth();
 const provider = new GoogleAuthProvider();
 
+const isAbortLikeError = (error) => {
+    if (!error) return false;
+    const codeOrName = String(error.code || error.name || '').toLowerCase();
+    const message = String(error.message || error).toLowerCase();
+    return (
+        codeOrName.includes('abort') ||
+        codeOrName.includes('cancel') ||
+        message.includes('aborted') ||
+        message.includes('cancelled') ||
+        message.includes('user aborted a request')
+    );
+};
+
 // --- YARDIMCI FONKSİYON: Formatlı Para (Alertler İçin) ---
 const formatCurrencyPlain = (amount) => {
     return new Intl.NumberFormat('tr-TR', {
@@ -144,13 +157,13 @@ function App() {
 
     const aileKoduCikis = () => {
         Swal.fire({
-            title: 'Çıkış Yapılsın mı?',
-            text: "Aile grubundan çıkmak istediğine emin misin?",
+            title: 'Aile Kodu Değiştirilsin mi?',
+            text: "Mevcut aile kodu kaldırılacak. Sonrasında yeni kod girebilirsin.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Evet, Çık',
+            confirmButtonText: 'Evet, Kodu Kaldır',
             cancelButtonText: 'İptal'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -216,6 +229,12 @@ function App() {
     // --- VERİLERİ ÇEKME ---
     useEffect(() => {
         if (!user || !aileKodu) return;
+        let isMounted = true;
+
+        const handleSnapshotError = (error, source) => {
+            if (isAbortLikeError(error)) return;
+            console.error(`${source} dinleme hatası:`, error);
+        };
 
         const qHesaplar = query(collection(db, "hesaplar"), where("aileKodu", "==", aileKodu));
         const qIslemler = query(collection(db, "nakit_islemleri"), where("aileKodu", "==", aileKodu));
@@ -226,19 +245,23 @@ function App() {
         const qFaturaTanim = query(collection(db, "fatura_tanimlari"), where("aileKodu", "==", aileKodu));
         const qBorclar = query(collection(db, "borclar"), where("aileKodu", "==", aileKodu));
 
-        const u1 = onSnapshot(qHesaplar, (s) => setHesaplar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+        const u1 = onSnapshot(
+            qHesaplar,
+            (s) => setHesaplar(s.docs.map(d => ({ id: d.id, ...d.data() }))),
+            (error) => handleSnapshotError(error, "Hesaplar")
+        );
         const u2 = onSnapshot(qIslemler, (s) => {
             const v = s.docs.map(d => ({ id: d.id, ...d.data() }));
             v.sort((a, b) => (b.tarih?.seconds || 0) - (a.tarih?.seconds || 0));
             setIslemler(v);
-        });
+        }, (error) => handleSnapshotError(error, "İşlemler"));
 
         // ABONELİKLER: Gününe göre sırala (Küçükten büyüğe)
         const u4 = onSnapshot(qAbonelik, (s) => {
             const veri = s.docs.map(d => ({ id: d.id, ...d.data() }));
             veri.sort((a, b) => (parseInt(a.gun) || 0) - (parseInt(b.gun) || 0));
             setAbonelikler(veri);
-        });
+        }, (error) => handleSnapshotError(error, "Abonelikler"));
 
         // TAKSİTLER: Alış tarihinin gününe göre sırala (Küçükten büyüğe)
         const u5 = onSnapshot(qTaksitler, (s) => {
@@ -249,42 +272,68 @@ function App() {
                 return gunA - gunB;
             });
             setTaksitler(veri);
-        });
+        }, (error) => handleSnapshotError(error, "Taksitler"));
 
-        const u6 = onSnapshot(qMaaslar, (s) => setMaaslar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-        const u7 = onSnapshot(qFaturalar, (s) => setBekleyenFaturalar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-        const u8 = onSnapshot(qFaturaTanim, (s) => setTanimliFaturalar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-        const u9 = onSnapshot(qBorclar, (s) => setBorclar(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+        const u6 = onSnapshot(
+            qMaaslar,
+            (s) => setMaaslar(s.docs.map(d => ({ id: d.id, ...d.data() }))),
+            (error) => handleSnapshotError(error, "Maaşlar")
+        );
+        const u7 = onSnapshot(
+            qFaturalar,
+            (s) => setBekleyenFaturalar(s.docs.map(d => ({ id: d.id, ...d.data() }))),
+            (error) => handleSnapshotError(error, "Bekleyen Faturalar")
+        );
+        const u8 = onSnapshot(
+            qFaturaTanim,
+            (s) => setTanimliFaturalar(s.docs.map(d => ({ id: d.id, ...d.data() }))),
+            (error) => handleSnapshotError(error, "Fatura Tanımları")
+        );
+        const u9 = onSnapshot(
+            qBorclar,
+            (s) => setBorclar(s.docs.map(d => ({ id: d.id, ...d.data() }))),
+            (error) => handleSnapshotError(error, "Borçlar")
+        );
 
         const ayarGetir = async () => {
-            const d = await getDoc(doc(db, "ayarlar", aileKodu));
-            if (d.exists()) {
-                const data = d.data();
-                setAylikLimit(data.limit || 10000);
-                if (data.kategoriler?.length > 0) {
-                    setKategoriListesi(data.kategoriler);
-                    setKategori(data.kategoriler[0]);
-                    setTaksitKategori(data.kategoriler[0]);
-                    if (data.kategoriler.includes("Fatura")) setAboKategori("Fatura");
-                    else setAboKategori(data.kategoriler[0]);
+            try {
+                const d = await getDoc(doc(db, "ayarlar", aileKodu));
+                if (!isMounted) return;
+
+                if (d.exists()) {
+                    const data = d.data();
+                    setAylikLimit(data.limit || 10000);
+                    if (data.kategoriler?.length > 0) {
+                        setKategoriListesi(data.kategoriler);
+                        setKategori(data.kategoriler[0]);
+                        setTaksitKategori(data.kategoriler[0]);
+                        if (data.kategoriler.includes("Fatura")) setAboKategori("Fatura");
+                        else setAboKategori(data.kategoriler[0]);
+                    }
+                    if (data.aileUyeleri?.length > 0) {
+                        setAileUyeleri(data.aileUyeleri);
+                        setHarcayanKisi(data.aileUyeleri[0]);
+                        setTaksitKisi(data.aileUyeleri[0]);
+                        setAboKisi(data.aileUyeleri[0]);
+                    }
+                } else {
+                    setKategori(kategoriListesi[0]);
+                    setHarcayanKisi(aileUyeleri[0]);
+                    setTaksitKategori(kategoriListesi[0]);
+                    setTaksitKisi(aileUyeleri[0]);
+                    setAboKategori("Fatura");
+                    setAboKisi(aileUyeleri[0]);
                 }
-                if (data.aileUyeleri?.length > 0) {
-                    setAileUyeleri(data.aileUyeleri);
-                    setHarcayanKisi(data.aileUyeleri[0]);
-                    setTaksitKisi(data.aileUyeleri[0]);
-                    setAboKisi(data.aileUyeleri[0]);
-                }
-            } else {
-                setKategori(kategoriListesi[0]);
-                setHarcayanKisi(aileUyeleri[0]);
-                setTaksitKategori(kategoriListesi[0]);
-                setTaksitKisi(aileUyeleri[0]);
-                setAboKategori("Fatura");
-                setAboKisi(aileUyeleri[0]);
+            } catch (error) {
+                if (isAbortLikeError(error) || !isMounted) return;
+                console.error("Ayarlar yüklenirken hata:", error);
             }
         }
         ayarGetir();
-        return () => { u1(); u2(); u4(); u5(); u6(); u7(); u8(); u9(); }
+        return () => {
+            isMounted = false;
+            u1(); u2(); u4(); u5(); u6(); u7(); u8(); u9();
+        }
     }, [user, aileKodu])
 
     // --- BİLDİRİM MOTORU ---
@@ -456,6 +505,20 @@ function App() {
     // --- FONKSİYONLAR ---
     const girisYap = async () => { try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); toast.error("Giriş başarısız!"); } }
     const cikisYap = async () => { await signOut(auth); }
+    const cikisYapOnayli = async () => {
+        const result = await Swal.fire({
+            title: 'Çıkış yapılsın mı?',
+            text: 'Google hesabından oturum kapatılacak.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Evet, Çıkış Yap',
+            cancelButtonText: 'İptal'
+        });
+        if (!result.isConfirmed) return;
+        await signOut(auth);
+    }
 
     const hesapEkle = async (e) => { e.preventDefault(); if (!hesapAdi) return; await addDoc(collection(db, "hesaplar"), { aileKodu, hesapAdi, hesapTipi, guncelBakiye: parseFloat(baslangicBakiye), kesimGunu: hesapTipi === 'krediKarti' ? hesapKesimGunu : "" }); toast.success("Hesap eklendi!"); setHesapAdi(""); setBaslangicBakiye(""); setHesapKesimGunu(""); }
 
@@ -1018,7 +1081,23 @@ function App() {
     const modalAc = (tip, veri) => {
         setSeciliVeri(veri); setAktifModal(tip);
         if (tip === 'duzenle_hesap') { setHesapAdi(veri.hesapAdi); setBaslangicBakiye(veri.guncelBakiye); setHesapKesimGunu(veri.kesimGunu || ""); }
-        if (tip === 'duzenle_islem') { setIslemAciklama(veri.aciklama); setIslemTutar(veri.tutar); setKategori(veri.kategori); setHarcayanKisi(veri.harcayan || aileUyeleri[0]); if (veri.tarih) { const date = new Date(veri.tarih.seconds * 1000); const isoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16); setIslemTarihi(isoString); } }
+        if (tip === 'duzenle_islem') {
+            setIslemAciklama(veri.aciklama);
+            setIslemTutar(veri.tutar);
+            setKategori(
+                veri.kategori ||
+                (veri.islemTipi === 'transfer' ? 'Transfer' : null) ||
+                (veri.islemTipi === 'gelir' ? 'Maaş/Gelir' : null) ||
+                kategoriListesi[0]
+            );
+            setHarcayanKisi(veri.harcayan || aileUyeleri[0]);
+            setSecilenHesapId(veri.hesapId || "");
+            if (veri.tarih) {
+                const date = new Date(veri.tarih.seconds * 1000);
+                const isoString = new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                setIslemTarihi(isoString);
+            }
+        }
         if (tip === 'duzenle_abonelik') { setAboAd(veri.ad); setAboTutar(veri.tutar); setAboGun(veri.gun); setAboHesapId(veri.hesapId); setAboKategori(veri.kategori || kategoriListesi[0]); setAboKisi(veri.kisi || aileUyeleri[0]); }
         if (tip === 'duzenle_taksit') { setTaksitBaslik(veri.baslik); setTaksitToplamTutar(veri.toplamTutar); setTaksitSayisi(veri.taksitSayisi); setTaksitHesapId(veri.hesapId); setTaksitKategori(veri.kategori); setTaksitKisi(veri.alanKisi); if (veri.alisTarihi) { const d = new Date(veri.alisTarihi.seconds * 1000); setTaksitAlisTarihi(d.toISOString().split('T')[0]); } }
         if (tip === 'duzenle_maas') { setMaasAd(veri.ad); setMaasTutar(veri.tutar); setMaasGun(veri.gun); setMaasHesapId(veri.hesapId); }
@@ -1028,7 +1107,74 @@ function App() {
     }
 
     const hesapDuzenle = async (e) => { e.preventDefault(); await updateDoc(doc(db, "hesaplar", seciliVeri.id), { hesapAdi, guncelBakiye: parseFloat(baslangicBakiye), kesimGunu: hesapKesimGunu }); setAktifModal(null); toast.success("Hesap güncellendi"); }
-    const islemDuzenle = async (e) => { e.preventDefault(); const guncelTarih = islemTarihi ? new Date(islemTarihi) : new Date(); await updateDoc(doc(db, "nakit_islemleri", seciliVeri.id), { aciklama: islemAciklama, tutar: parseFloat(islemTutar), kategori, harcayan: harcayanKisi, tarih: guncelTarih }); setAktifModal(null); toast.success("İşlem güncellendi"); }
+    const hesapEtkiMiktari = (tip, tutar) => {
+        if (tip === 'gelir') return tutar;
+        if (tip === 'gider') return -tutar;
+        return 0;
+    };
+    const islemDuzenle = async (e) => {
+        e.preventDefault();
+
+        const yeniTutar = parseFloat(islemTutar);
+        if (!Number.isFinite(yeniTutar) || yeniTutar <= 0) {
+            return toast.warning("Geçerli bir tutar girin.");
+        }
+
+        const guncelTarih = islemTarihi ? new Date(islemTarihi) : new Date();
+        const eskiTutar = parseFloat(seciliVeri?.tutar) || 0;
+        const eskiHesapId = seciliVeri?.hesapId || "";
+        const yeniHesapId = secilenHesapId || eskiHesapId;
+        const mevcutIslemTipi = seciliVeri?.islemTipi;
+
+        if (mevcutIslemTipi !== 'transfer' && !yeniHesapId) {
+            return toast.warning("Lütfen ödeme aracını seçin.");
+        }
+
+        try {
+            const batch = writeBatch(db);
+            const islemRef = doc(db, "nakit_islemleri", seciliVeri.id);
+
+            const updatePayload = {
+                aciklama: islemAciklama,
+                tutar: yeniTutar,
+                kategori,
+                harcayan: harcayanKisi,
+                tarih: guncelTarih
+            };
+
+            if (mevcutIslemTipi !== 'transfer') {
+                updatePayload.hesapId = yeniHesapId;
+            }
+
+            batch.update(islemRef, updatePayload);
+
+            if (mevcutIslemTipi !== 'transfer' && eskiHesapId) {
+                const eskiEtki = hesapEtkiMiktari(mevcutIslemTipi, eskiTutar);
+                const yeniEtki = hesapEtkiMiktari(mevcutIslemTipi, yeniTutar);
+
+                if (eskiHesapId === yeniHesapId) {
+                    const fark = yeniEtki - eskiEtki;
+                    if (fark !== 0) {
+                        batch.update(doc(db, "hesaplar", eskiHesapId), { guncelBakiye: increment(fark) });
+                    }
+                } else {
+                    if (eskiEtki !== 0) {
+                        batch.update(doc(db, "hesaplar", eskiHesapId), { guncelBakiye: increment(-eskiEtki) });
+                    }
+                    if (yeniEtki !== 0) {
+                        batch.update(doc(db, "hesaplar", yeniHesapId), { guncelBakiye: increment(yeniEtki) });
+                    }
+                }
+            }
+
+            await batch.commit();
+            setAktifModal(null);
+            toast.success("İşlem güncellendi");
+        } catch (error) {
+            console.error("İşlem güncelleme hatası:", error);
+            toast.error("İşlem güncellenirken hata oluştu.");
+        }
+    }
     const abonelikDuzenle = async (e) => { e.preventDefault(); await updateDoc(doc(db, "abonelikler", seciliVeri.id), { ad: aboAd, tutar: parseFloat(aboTutar), gun: aboGun, hesapId: aboHesapId, kategori: aboKategori, kisi: aboKisi }); setAktifModal(null); setAboAd(""); setAboTutar(""); setAboGun(""); setAboHesapId(""); toast.success("Abonelik güncellendi"); }
     const taksitDuzenle = async (e) => { e.preventDefault(); const toplam = parseFloat(taksitToplamTutar); const sayi = parseInt(taksitSayisi); const aylik = toplam / sayi; const tarih = taksitAlisTarihi ? new Date(taksitAlisTarihi) : new Date(); await updateDoc(doc(db, "taksitler", seciliVeri.id), { baslik: taksitBaslik, toplamTutar: toplam, taksitSayisi: sayi, aylikTutar: aylik, hesapId: taksitHesapId, kategori: taksitKategori, alanKisi: taksitKisi, alisTarihi: tarih }); setAktifModal(null); setTaksitBaslik(""); setTaksitToplamTutar(""); setTaksitSayisi(""); setTaksitHesapId(""); setTaksitAlisTarihi(""); toast.success("Taksit güncellendi"); }
     const maasDuzenle = async (e) => { e.preventDefault(); await updateDoc(doc(db, "maaslar", seciliVeri.id), { ad: maasAd, tutar: parseFloat(maasTutar), gun: maasGun, hesapId: maasHesapId }); setAktifModal(null); setMaasAd(""); setMaasTutar(""); setMaasGun(""); setMaasHesapId(""); toast.success("Maaş güncellendi"); }
@@ -1047,7 +1193,7 @@ function App() {
     }
 
     return (
-        <div style={{ padding: '30px', fontFamily: 'Segoe UI', width: '100vw', boxSizing: 'border-box', background: '#f7f9fc', minHeight: '100vh', color: '#333', overflowX: 'hidden' }}>
+        <div className="app-page-shell" style={{ padding: '30px', fontFamily: 'Segoe UI', width: '100vw', boxSizing: 'border-box', background: '#f7f9fc', minHeight: '100vh', color: '#333', overflowX: 'hidden' }}>
             <ToastContainer position="top-right" autoClose={2000} theme="light" />
 
             <Modals
@@ -1059,6 +1205,7 @@ function App() {
                 islemAciklama={islemAciklama} setIslemAciklama={setIslemAciklama}
                 islemTutar={islemTutar} setIslemTutar={setIslemTutar}
                 islemTarihi={islemTarihi} setIslemTarihi={setIslemTarihi}
+                secilenHesapId={secilenHesapId} setSecilenHesapId={setSecilenHesapId}
                 harcayanKisi={harcayanKisi} setHarcayanKisi={setHarcayanKisi}
                 kategori={kategori} setKategori={setKategori}
                 aboAd={aboAd} setAboAd={setAboAd}
@@ -1130,7 +1277,6 @@ function App() {
             <div id="dashboard-top">
                 <DashboardStats
                     user={user}
-                    aileKodu={aileKodu}
                     bildirimler={bildirimler}
                     toplamGelir={toplamGelir}
                     toplamGider={toplamGider}
@@ -1141,9 +1287,11 @@ function App() {
                     setAktifAy={setAktifAy}
                     modalAc={modalAc}
                     setAktifModal={setAktifModal}
-                    cikisYap={cikisYap}
+                    cikisYap={cikisYapOnayli}
                     aileKoduCikis={aileKoduCikis}
                     formatPara={formatPara}
+                    gizliMod={gizliMod}
+                    gizliModDegistir={() => setGizliMod(prev => !prev)}
                     aileUyeleri={aileUyeleri}
                     filtrelenmisIslemler={filtrelenmisIslemler}
                     gunlukOrtalama={gunlukOrtalama}
@@ -1154,7 +1302,7 @@ function App() {
                 />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
+            <div className="app-main-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '25px' }}>
                 <Sidebar
                     netVarlik={hesaplar.reduce((acc, h) => acc + (parseFloat(h.guncelBakiye) || 0), 0)}
                     aylikLimit={aylikLimit} setAylikLimit={setAylikLimit}

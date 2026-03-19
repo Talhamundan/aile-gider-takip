@@ -40,6 +40,9 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -53,6 +56,11 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 a {
@@ -175,6 +183,51 @@ button:active {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: #fff;
   box-shadow: 0 10px 25px rgba(239, 68, 68, 0.18);
+}
+
+/* --- Dashboard Header Controls --- */
+.dashboard-user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #2d3748;
+  font-size: 14px;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.dashboard-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.dashboard-icon-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.98);
+}
+
+.dashboard-icon-btn-neutral {
+  background: #e5e7eb;
+  border-color: #dbe2ea;
+}
+
+.dashboard-icon-btn-danger {
+  background: #f5dcdc;
+  border-color: #efc7c7;
+}
+
+.dashboard-icon-btn-active {
+  background: #d7e0ec;
+  border-color: #bdc9d8;
 }
 
 /* --- MODAL BUTTONS --- */
@@ -332,6 +385,16 @@ textarea:focus {
 
 /* --- Budget responsive helpers (for Dashboard-style cards) --- */
 @media (max-width: 767px) {
+  .app-page-shell {
+    padding: 16px !important;
+    overflow-x: clip !important;
+  }
+
+  .app-main-layout {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+
   .responsive-grid-3,
   .responsive-grid-2 {
     grid-template-columns: 1fr !important;
@@ -350,6 +413,158 @@ textarea:focus {
   .responsive-amount {
     font-size: 22px !important;
     word-break: break-word;
+  }
+
+  .dashboard-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px;
+    padding: 0 !important;
+  }
+
+  .dashboard-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .dashboard-user-badge {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 4px;
+  }
+
+  .dashboard-icon-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+  }
+
+  .dashboard-alert-grid,
+  .dashboard-people-grid,
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  #dashboard-top,
+  #dashboard-top > *,
+  .app-main-layout,
+  .app-main-layout > *,
+  .sidebar-stack,
+  .sidebar-card,
+  .responsive-card,
+  .dashboard-trend-card,
+  .dashboard-pie-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .dashboard-trend-card,
+  .dashboard-pie-card {
+    overflow-x: hidden;
+  }
+
+  .sidebar-stack {
+    gap: 16px !important;
+  }
+
+  .sidebar-card {
+    padding: 16px !important;
+  }
+
+  .sidebar-card-header {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    gap: 10px;
+  }
+
+  .sidebar-row {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .sidebar-row-main {
+    flex: 1 1 180px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .sidebar-actions {
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px !important;
+  }
+
+  .sidebar-scroll-list {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .sidebar-card-footer-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 6px;
+  }
+
+  .sidebar-bill-item {
+    overflow: visible !important;
+  }
+
+  .sidebar-card * {
+    min-width: 0;
+  }
+
+  .transaction-form-row,
+  .transfer-input-row {
+    flex-direction: column;
+  }
+
+  .transfer-form-grid,
+  .invoice-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .transfer-span-full,
+  .invoice-span-full {
+    grid-column: auto !important;
+  }
+
+  .history-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  .history-filter-bar {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .history-filter-bar > * {
+    width: 100%;
+    min-width: 0 !important;
+  }
+
+  .history-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
+  }
+
+  .history-table-wrap table {
+    width: max-content !important;
+    min-width: 760px !important;
+  }
+
+  .history-table-wrap th,
+  .history-table-wrap td {
+    white-space: nowrap;
   }
 }
 
